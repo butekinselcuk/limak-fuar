@@ -1,0 +1,28 @@
+{
+ "w": 1920,
+ "h": 1080,
+ "core": [
+  960,
+  828
+ ],
+ "order": [
+  "ruzgar",
+  "insaat",
+  "su",
+  "cimento",
+  "teknoloji",
+  "hava",
+  "gunes",
+  "turizm"
+ ],
+ "regions": {
+  "ruzgar": {},
+  "insaat": {},
+  "su": {},
+  "cimento": {},
+  "teknoloji": {},
+  "hava": {},
+  "gunes": {},
+  "turizm": {}
+ }
+}

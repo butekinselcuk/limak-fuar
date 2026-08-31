@@ -1,0 +1,321 @@
+@import url("fonts.css");
+
+/* ============================================================
+   LİMAK · COP31 FUAR DENEYİMİ — tasarım sistemi
+   Karanlık toprak zemin, sektöre göre ışık rengi.
+   ============================================================ */
+
+:root {
+  /* ---- zemin: siyah değil, gece toprağı ---- */
+  --void:      #04090a;
+  --soil:      #081013;
+  --mist:      #0e1c20;
+  --ridge:     #16292e;
+  --hairline:  rgba(150, 214, 195, 0.14);
+  --hairline-soft: rgba(150, 214, 195, 0.07);
+
+  /* ---- yaşam: filiz yeşili ailesi ---- */
+  --sprout:    #8ce563;
+  --sprout-hi: #b6ff8a;
+  --emerald:   #22c55e;
+  --deep-leaf: #0d6b3f;
+
+  /* ---- sektör ışıkları ---- */
+  --s-ruzgar:   #5be8c0;
+  --s-gunes:    #ffc861;
+  --s-su:       #4cc9f0;
+  --s-insaat:   #ff8a3d;
+  --s-cimento:  #cdbfa4;
+  --s-hava:     #b39dff;
+  --s-turizm:   #ff7fa8;
+  --s-orman:    #8ce563;
+
+  /* ---- metin ---- */
+  --bone:      #eaf3ee;
+  --bone-dim:  #b6c9c1;
+  --ash:       #7b918b;
+  --ash-deep:  #4c5f5b;
+
+  /* ---- tipografi ---- */
+  --f-display: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --f-body:    "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-data:    "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* ---- ölçek (fuar ekranı: büyük) ---- */
+  --t-mega:  clamp(3.5rem, 11vw, 11.5rem);
+  --t-xxl:   clamp(2.4rem, 5.2vw, 5rem);
+  --t-xl:    clamp(1.7rem, 2.9vw, 2.9rem);
+  --t-lg:    clamp(1.25rem, 1.7vw, 1.7rem);
+  --t-md:    clamp(1rem, 1.15vw, 1.18rem);
+  --t-sm:    clamp(0.84rem, 0.92vw, 0.95rem);
+  --t-xs:    clamp(0.7rem, 0.74vw, 0.78rem);
+
+  /* ---- hareket ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-pill: 999px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--void);
+  color: var(--bone);
+  font-family: var(--f-body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+body {
+  overflow: hidden;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+
+::selection { background: var(--sprout); color: var(--void); }
+
+/* ---- odak: fuar ekranında görünmez olmasın ---- */
+:focus-visible {
+  outline: 2px solid var(--sprout);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   ORTAK BİLEŞENLER
+   ============================================================ */
+
+/* --- üst çubuk --- */
+.topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 clamp(18px, 2.4vw, 40px);
+  z-index: 60;
+  background: linear-gradient(180deg, rgba(4, 9, 10, 0.92) 0%, rgba(4, 9, 10, 0.55) 60%, transparent 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+.brand__mark {
+  width: 30px; height: 30px;
+  flex: none;
+}
+.brand__logo {
+  height: 30px;
+  width: auto;
+  display: block;
+  flex: none;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.45));
+}
+.brand__sep {
+  width: 1px;
+  height: 22px;
+  flex: none;
+  background: var(--hairline);
+}
+.brand__text {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-stretch: 118%;
+  letter-spacing: 0.13em;
+  font-size: var(--t-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.brand__text em {
+  font-style: normal;
+  color: var(--ash);
+  font-weight: 500;
+}
+
+/* --- etiket / eyebrow --- */
+.eyebrow {
+  font-family: var(--f-data);
+  font-size: var(--t-xs);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ash);
+  font-weight: 500;
+}
+
+/* --- geri butonu --- */
+.btn-back {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px 9px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: rgba(14, 28, 32, 0.6);
+  font-family: var(--f-data);
+  font-size: var(--t-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  text-decoration: none;
+  transition: border-color 0.3s, color 0.3s, background 0.3s;
+}
+.btn-back:hover { border-color: var(--sprout); color: var(--sprout); background: rgba(140, 229, 99, 0.08); }
+.btn-back svg { width: 14px; height: 14px; }
+
+/* --- ince gürültü dokusu: dijital düzlüğü kırar --- */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainshift 0.9s steps(3) infinite;
+  mix-blend-mode: overlay;
+}
+@keyframes grainshift {
+  0%   { transform: translate(0, 0); }
+  33%  { transform: translate(-3%, 2%); }
+  66%  { transform: translate(2%, -3%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* --- vinyet --- */
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  background: radial-gradient(128% 96% at 50% 46%, transparent 56%, rgba(0, 0, 0, 0.42) 100%);
+}
+
+/* --- yükleme kaplaması --- */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--void);
+  transition: opacity 0.8s var(--ease-out), visibility 0.8s;
+}
+.boot.is-done { opacity: 0; visibility: hidden; }
+.boot__bar {
+  width: 180px; height: 2px;
+  background: var(--ridge);
+  overflow: hidden;
+  border-radius: 2px;
+}
+.boot__bar i {
+  display: block; height: 100%; width: 40%;
+  background: var(--sprout);
+  animation: bootslide 1.1s var(--ease-io) infinite;
+}
+@keyframes bootslide {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(360%); }
+}
+
+/* --- ekran çok küçükse uyarı yerine sadece ölçek düşer --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.08s !important;
+  }
+  .grain { animation: none; }
+}
+
+/* --- yardımcılar --- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   ÖLÇEK ŞERİDİ — grubun büyüklüğü, karşılama anında
+   Rakam iri ve display fontunda; etiket küçük ve sessiz.
+   Böylece uzaktan bakıldığında önce sayılar okunur.
+   ============================================================ */
+.scalebar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.scalebar li {
+  position: relative;
+  padding: 0 clamp(16px, 2.2vw, 34px);
+  text-align: center;
+}
+.scalebar li + li::before {          /* aradaki ince ayraç */
+  content: "";
+  position: absolute;
+  left: 0; top: 14%;
+  width: 1px; height: 72%;
+  background: var(--hairline);
+}
+.scalebar b {
+  display: block;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: clamp(1.3rem, 2.1vw, 2.05rem);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.scalebar span {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--f-data);
+  font-size: clamp(0.56rem, 0.66vw, 0.7rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ash);
+  white-space: nowrap;
+}
+/* sırayla belirir — sayılar tek tek oturur */
+.scalebar li {
+  opacity: 0;
+  translate: 0 10px;
+  animation: scaleIn 0.7s var(--ease-out) forwards;
+  animation-delay: calc(var(--i) * 90ms + 400ms);
+}
+@keyframes scaleIn { to { opacity: 1; translate: 0 0; } }
+
+/* giriş sayfası: alt bilgi çubuğunun orta yuvasında, kompakt */
+.scalebar--home b { font-size: clamp(0.95rem, 1.25vw, 1.24rem); }
+.scalebar--home span { font-size: 0.54rem; letter-spacing: 0.16em; }
+.scalebar--home li { padding: 0 clamp(10px, 1.5vw, 22px); }
+@media (max-width: 1000px) { .scalebar--home { display: none; } }

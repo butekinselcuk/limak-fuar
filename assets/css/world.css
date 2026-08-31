@@ -1,0 +1,861 @@
+/* ============================================================
+   WORLD WITH LIMAK
+   ============================================================ */
+
+.world { background: #1a1f22; }
+
+/* ---------- sahne ---------- */
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+.scene, .fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.fx { pointer-events: none; z-index: 12; }
+
+/* merkezden taşan ışık — sürükleme yaklaştıkça güçlenir */
+.surge {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle var(--sr, 340px) at var(--sx, 50%) var(--sy, 70%),
+              rgba(182, 255, 138, 0.55) 0%,
+              rgba(140, 229, 99, 0.22) 34%,
+              rgba(76, 201, 240, 0.08) 62%,
+              transparent 78%);
+  transition: opacity 0.18s linear;
+}
+
+/* ============================================================
+   MERKEZ ÇEKİRDEK
+   ============================================================ */
+.core {
+  position: absolute;
+  z-index: 14;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: scale 0.5s var(--ease-spring);
+  scale: 1;
+}
+.core.is-near { scale: 1.1; }
+.core.is-full { opacity: 0; visibility: hidden; transition: opacity 0.8s, visibility 0.8s; }
+
+.core__halo,
+.core__ring { position: absolute; border-radius: 50%; }
+
+.core__halo {
+  width: 340px; height: 340px;
+  background: radial-gradient(circle, rgba(140,229,99,.28) 0%, rgba(140,229,99,.07) 44%, transparent 70%);
+  opacity: 0.5;
+  animation: haloBreath 3.6s ease-in-out infinite;
+}
+.core.is-near .core__halo { opacity: 1; }
+@keyframes haloBreath { 0%,100% { transform: scale(0.92); } 50% { transform: scale(1.06); } }
+
+.core__ring {
+  border: 2px dashed rgba(140, 229, 99, 0.5);
+  width: 190px; height: 190px;
+}
+.core__ring--a { animation: ringSpin 26s linear infinite; }
+.core__ring--b {
+  width: 128px; height: 128px;
+  border-style: solid;
+  border-color: rgba(140, 229, 99, 0.28);
+  animation: ringSpin 18s linear infinite reverse;
+}
+@keyframes ringSpin { to { transform: rotate(360deg); } }
+.core.is-near .core__ring { border-color: var(--sprout-hi); }
+
+.core__plus {
+  width: 62px; height: 62px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--sprout);
+  background: rgba(6, 18, 14, 0.6);
+  border: 1px solid rgba(140, 229, 99, 0.35);
+  backdrop-filter: blur(6px);
+  transition: scale 0.4s var(--ease-spring), color 0.3s, background 0.3s;
+}
+.core__plus svg { width: 30px; height: 30px; }
+.core.is-near .core__plus {
+  scale: 1.18;
+  color: var(--void);
+  background: var(--sprout-hi);
+  box-shadow: 0 0 40px 6px rgba(140, 229, 99, 0.5);
+}
+
+.core__label {
+  position: absolute;
+  top: auto;
+  bottom: calc(50% + 118px);
+  white-space: nowrap;
+  font-family: var(--f-data);
+  font-size: var(--t-xs);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  padding: 7px 15px;
+  border-radius: var(--r-pill);
+  background: rgba(4, 12, 10, 0.65);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(8px);
+  transition: color 0.3s, border-color 0.3s, opacity 0.3s;
+}
+.core.is-near .core__label { color: var(--sprout-hi); border-color: rgba(140,229,99,.5); }
+.core.is-dragging .core__label { opacity: 1; }
+
+/* ============================================================
+   FOTOĞRAF KATMANLARI
+   Hepsi aynı ana fotoğrafın türevi; maskeler yalnızca
+   "ne kadarı görünsün" sorusunu yanıtlar.
+   ============================================================ */
+@property --bloom { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --wave  { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --hr    { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  --cx: 50%;
+  --cy: 76.7%;          /* çekirdek: 828/1080 */
+  --bloom: 0px;
+  /* kamera dalışı: yerleştirilen bölgeye kısa, sinematik yaklaşma */
+  transition: transform 2s cubic-bezier(0.22, 0.9, 0.28, 1);
+}
+.scene.is-punch { transform: scale(1.13); }
+.plate {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Canlı arazi: merkezden dışa açılan cephe.
+   Tek daire kullanılsaydı geçiş belirgin bir yay çizerdi. Üç farklı
+   merkez ve orandaki elips birleştirilerek cephe düzensizleşir; hayat
+   araziye dairesel değil, organik biçimde yayılmış gibi görünür. */
+.plate--alive {
+  -webkit-mask-image:
+    radial-gradient(circle var(--bloom) at var(--cx) var(--cy),
+      #000 34%, rgba(0,0,0,.62) 68%, rgba(0,0,0,.22) 88%, transparent 100%),
+    radial-gradient(ellipse calc(var(--bloom) * .84) calc(var(--bloom) * 1.06)
+      at calc(var(--cx) - 13%) calc(var(--cy) - 7%),
+      #000 40%, rgba(0,0,0,.4) 76%, transparent 100%),
+    radial-gradient(ellipse calc(var(--bloom) * 1.12) calc(var(--bloom) * .8)
+      at calc(var(--cx) + 15%) calc(var(--cy) + 5%),
+      #000 38%, rgba(0,0,0,.4) 74%, transparent 100%);
+  mask-image:
+    radial-gradient(circle var(--bloom) at var(--cx) var(--cy),
+      #000 34%, rgba(0,0,0,.62) 68%, rgba(0,0,0,.22) 88%, transparent 100%),
+    radial-gradient(ellipse calc(var(--bloom) * .84) calc(var(--bloom) * 1.06)
+      at calc(var(--cx) - 13%) calc(var(--cy) - 7%),
+      #000 40%, rgba(0,0,0,.4) 76%, transparent 100%),
+    radial-gradient(ellipse calc(var(--bloom) * 1.12) calc(var(--bloom) * .8)
+      at calc(var(--cx) + 15%) calc(var(--cy) + 5%),
+      #000 38%, rgba(0,0,0,.4) 74%, transparent 100%);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+  transition: --bloom 2.4s var(--ease-out);
+}
+
+/* bölgesel iyileşme: yerleştirilen sektör KENDİ bölgesini hemen yeşertir.
+   Ana bloom merkezden büyürken bu katman "bu yatırım şurayı canlandırdı"
+   hissini verir — her bırakma yerel ve okunur bir dönüşüm olur. */
+.heals { position: absolute; inset: 0; }
+.heal {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  --hr: 0%;
+  -webkit-mask-image: radial-gradient(ellipse var(--hrx, 400px) var(--hry, 200px) at var(--hx, 50%) var(--hy, 50%),
+                      #000 calc(var(--hr) * 0.34), rgba(0,0,0,.45) calc(var(--hr) * 0.72), transparent var(--hr));
+  mask-image: radial-gradient(ellipse var(--hrx, 400px) var(--hry, 200px) at var(--hx, 50%) var(--hy, 50%),
+              #000 calc(var(--hr) * 0.34), rgba(0,0,0,.45) calc(var(--hr) * 0.72), transparent var(--hr));
+  transition: --hr 2.3s var(--ease-out);
+  will-change: mask-image;
+}
+.heal.is-on { --hr: 165%; }
+
+/* sektör yapıları: kendi bölge maskesi ∩ merkezden yayılan dalga */
+.sectors { position: absolute; inset: 0; }
+.sector {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  --wave: 0px;
+  -webkit-mask-image: var(--rgn), radial-gradient(circle var(--wave) at var(--cx) var(--cy),
+                      #000 74%, rgba(0,0,0,.4) 92%, transparent 100%);
+  mask-image: var(--rgn), radial-gradient(circle var(--wave) at var(--cx) var(--cy),
+              #000 74%, rgba(0,0,0,.4) 92%, transparent 100%);
+  /* Maske, arka planla AYNI cover geometrisine oturtulur; yoksa 16:9
+     olmayan pencerede maske ile fotoğraf birbirinden kayar ve yapının
+     bir kısmı maske deliğinin dışında kalır. Değerleri measure() yazar. */
+  -webkit-mask-size: var(--mw, 100%) var(--mh, 100%), auto;
+  mask-size: var(--mw, 100%) var(--mh, 100%), auto;
+  -webkit-mask-position: var(--mx, 0) var(--my, 0), center;
+  mask-position: var(--mx, 0) var(--my, 0), center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  mask-composite: intersect;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out), --wave 1.5s var(--ease-out);
+}
+.sector.is-on { opacity: 1; --wave: 2600px; }
+/* sürükleme önizlemesi: yapı hayalet gibi belirir */
+.sector.is-ghost {
+  opacity: var(--ghost, 0);
+  --wave: 2600px;
+  filter: brightness(1.25) saturate(0.5);
+  transition: opacity 0.18s linear;
+}
+
+/* ortak son kalibrasyon: tüm katmanlar aynı ışığa oturur */
+.scene__grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(78% 62% at 50% 26%, rgba(255, 236, 190, 0.10) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(8, 22, 30, 0.16) 0%, transparent 34%, rgba(6, 16, 12, 0.20) 100%);
+  mix-blend-mode: soft-light;
+}
+
+/* ============================================================
+   BİLGİ ÇİPİ — yerleştirme anında bölgenin üstünde beliren gerçek veri
+   ============================================================ */
+.factchip {
+  position: fixed;
+  z-index: 46;
+  translate: -50% calc(-100% - 18px);
+  max-width: min(420px, 44vw);
+  padding: 12px 18px 13px;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--fc, var(--sprout)) 55%, transparent);
+  border-left-width: 3px;
+  background: rgba(5, 13, 14, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 22px 60px -18px rgba(0, 0, 0, 0.85),
+              0 0 34px -8px color-mix(in srgb, var(--fc, var(--sprout)) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.94);
+  transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-spring);
+}
+.factchip.is-show { opacity: 1; transform: none; }
+.factchip__eye {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.62rem;
+  color: var(--fc, var(--sprout));
+}
+.factchip__txt {
+  display: block;
+  font-family: var(--f-body);
+  font-size: var(--t-sm);
+  font-weight: 700;
+  line-height: 1.42;
+  color: var(--bone);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   ÜST ÇUBUK — ölçer & karbon
+   ============================================================ */
+.wtop { background: linear-gradient(180deg, rgba(4,9,10,.85) 0%, rgba(4,9,10,.35) 62%, transparent 100%); }
+
+
+.gauge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: clamp(16px, 4vw, 64px);
+  min-width: clamp(180px, 26vw, 400px);
+}
+.gauge__track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--hairline-soft);
+}
+.gauge__fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, #2f8f5a, var(--sprout) 62%, var(--sprout-hi));
+  box-shadow: 0 0 18px 1px rgba(140, 229, 99, 0.55);
+  transition: width 0.9s var(--ease-out);
+}
+.gauge__num {
+  font-family: var(--f-data);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--sprout);
+  min-width: 4.2ch;
+  text-align: right;
+}
+
+.carbon {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: 26px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: rgba(10, 22, 20, 0.55);
+  backdrop-filter: blur(10px);
+}
+.carbon__lbl { color: var(--ash); }
+.carbon__val {
+  font-family: var(--f-data);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--bone-dim);
+  transition: color 0.5s;
+}
+.carbon.is-good .carbon__val { color: var(--sprout-hi); }
+
+/* ============================================================
+   SEKTÖR OKUMALARI (sol sütun)
+   ============================================================ */
+.readouts {
+  position: fixed;
+  left: clamp(14px, 1.6vw, 28px);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: clamp(184px, 15vw, 236px);
+}
+.ro {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 13px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-soft);
+  background: rgba(8, 16, 19, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0.34;
+  transition: opacity 0.5s, border-color 0.5s, background 0.5s, translate 0.5s var(--ease-out);
+  translate: -8px 0;
+  cursor: default;
+}
+.ro.is-on {
+  opacity: 1;
+  translate: 0 0;
+  border-color: color-mix(in srgb, var(--c) 42%, transparent);
+  background: rgba(8, 20, 20, 0.72);
+  cursor: pointer;
+}
+.ro__dot {
+  width: 9px; height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ash-deep);
+  transition: background 0.5s, box-shadow 0.5s;
+}
+.ro.is-on .ro__dot { background: var(--c); box-shadow: 0 0 12px 1px var(--c); }
+.ro__txt { min-width: 0; }
+.ro__name {
+  display: block;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ro.is-on .ro__name { color: var(--bone); }
+.ro__val {
+  display: block;
+  font-family: var(--f-data);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ash-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ro.is-on .ro__val { color: var(--c); }
+.ro__i {
+  margin-left: auto;
+  flex: none;
+  width: 15px; height: 15px;
+  opacity: 0;
+  color: var(--c);
+  transition: opacity 0.4s;
+}
+.ro.is-on .ro__i { opacity: 0.55; }
+.ro.is-on:hover .ro__i { opacity: 1; }
+
+/* ============================================================
+   ALT TEPSİ
+   ============================================================ */
+.tray {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 34;
+  padding: 14px clamp(16px, 2.4vw, 40px) clamp(16px, 2vh, 26px);
+  background: linear-gradient(0deg, rgba(4,9,10,.96) 12%, rgba(4,9,10,.72) 62%, transparent 100%);
+  transition: translate 0.7s var(--ease-out), opacity 0.7s;
+}
+.tray.is-empty { translate: 0 120%; opacity: 0; pointer-events: none; }
+
+.tray__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.tray__hint {
+  color: var(--bone-dim);
+  transition: color 0.4s;
+}
+.tray__hint.is-alert { color: var(--sprout-hi); }
+.tray__count { color: var(--ash); }
+.tray__count b { color: var(--sprout); }
+
+.tray__rail {
+  display: flex;
+  gap: clamp(8px, 0.9vw, 15px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 4px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ridge) transparent;
+}
+.tray__rail::-webkit-scrollbar { height: 5px; }
+.tray__rail::-webkit-scrollbar-thumb { background: var(--ridge); border-radius: 3px; }
+
+/* --- çip --- */
+.chip {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--c) 16%, transparent) 0%, transparent 62%),
+    rgba(10, 20, 23, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  transition: border-color 0.3s, background 0.3s, opacity 0.4s, scale 0.35s var(--ease-spring);
+  will-change: transform;
+}
+.chip:hover { border-color: color-mix(in srgb, var(--c) 55%, transparent); scale: 1.035; }
+.chip:active { cursor: grabbing; }
+.chip.is-drag {
+  position: fixed;
+  z-index: 80;
+  width: 128px;
+  min-width: 0;
+  flex: none;
+  pointer-events: none;
+  scale: 1.12;
+  border-color: var(--c);
+  box-shadow: 0 26px 60px -14px rgba(0, 0, 0, 0.75),
+              0 0 0 1px color-mix(in srgb, var(--c) 50%, transparent),
+              0 0 44px -6px color-mix(in srgb, var(--c) 70%, transparent);
+  transition: scale 0.25s var(--ease-spring), box-shadow 0.25s;
+}
+.chip.is-drag.is-hot { scale: 1.28; }
+.chip.is-placed {
+  opacity: 0.22;
+  pointer-events: none;
+  filter: grayscale(0.7);
+}
+.chip.is-placed .chip__check { opacity: 1; scale: 1; }
+
+.chip__ico {
+  width: 42px; height: 42px;
+  color: var(--c);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 45%, transparent));
+}
+.chip__name {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bone);
+  text-align: center;
+  line-height: 1.25;
+}
+.chip__sub {
+  font-family: var(--f-data);
+  font-size: 0.63rem;
+  letter-spacing: 0.08em;
+  color: var(--ash);
+  text-align: center;
+}
+.chip__check {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 19px; height: 19px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--sprout);
+  color: var(--void);
+  opacity: 0;
+  scale: 0.4;
+  transition: opacity 0.4s, scale 0.4s var(--ease-spring);
+}
+.chip__check svg { width: 11px; height: 11px; }
+
+
+/* ============================================================
+   SEKTÖR DETAY KARTI
+   ============================================================ */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 7, 8, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn2 0.35s var(--ease-out);
+}
+@keyframes fadeIn2 { from { opacity: 0; } to { opacity: 1; } }
+.sheet[hidden] { display: none; }
+
+.sheet__panel {
+  position: relative;
+  width: min(620px, 92vw);
+  max-height: 84vh;
+  overflow-y: auto;
+  padding: clamp(28px, 3.4vw, 46px);
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in srgb, var(--c, var(--sprout)) 30%, var(--hairline));
+  background:
+    radial-gradient(90% 60% at 12% 0%, color-mix(in srgb, var(--c, var(--sprout)) 13%, transparent) 0%, transparent 66%),
+    linear-gradient(180deg, #0d1a1e 0%, #081114 100%);
+  box-shadow: 0 40px 100px -30px rgba(0,0,0,.9);
+  animation: sheetIn 0.5s var(--ease-out);
+}
+@keyframes sheetIn { from { opacity: 0; transform: translateY(26px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+.sheet__x {
+  position: absolute;
+  top: 18px; right: 18px;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  color: var(--ash);
+  transition: color 0.3s, border-color 0.3s, background 0.3s;
+}
+.sheet__x:hover { color: var(--bone); border-color: var(--bone-dim); background: rgba(255,255,255,.05); }
+.sheet__x svg { width: 16px; height: 16px; }
+
+.sheet__tag { color: var(--c, var(--sprout)); }
+.sheet__title {
+  margin: 12px 0 14px;
+  font-family: var(--f-display);
+  font-size: var(--t-xl);
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+}
+.sheet__lede {
+  margin: 0 0 26px;
+  font-size: var(--t-md);
+  line-height: 1.62;
+  color: var(--bone-dim);
+}
+.sheet__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  background: var(--hairline-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.sheet__stats li {
+  padding: 16px 15px;
+  background: rgba(10, 22, 25, 0.9);
+}
+.sheet__stats b {
+  display: block;
+  font-family: var(--f-display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  font-stretch: 108%;
+  color: var(--c, var(--sprout));
+  letter-spacing: -0.01em;
+}
+.sheet__stats span {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--f-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.sheet__note {
+  margin: 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline-soft);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ash);
+}
+
+/* ============================================================
+   FİNAL
+   ============================================================ */
+.finale {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 5vh 24px;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(6,26,18,.72) 0%, rgba(2,7,8,.94) 70%);
+  backdrop-filter: blur(6px);
+  animation: fadeIn2 0.9s var(--ease-out);
+}
+.finale[hidden] { display: none; }
+.finale__inner {
+  width: min(880px, 94vw);
+  text-align: center;
+}
+.finale__eye { color: var(--sprout); }
+.finale__title {
+  margin: 16px 0 18px;
+  font-family: var(--f-display);
+  font-size: var(--t-xxl);
+  font-weight: 800;
+  font-stretch: 116%;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.finale__title em {
+  font-style: normal;
+  color: var(--sprout);
+}
+.finale__lede {
+  margin: 0 auto 34px;
+  max-width: 56ch;
+  font-size: var(--t-md);
+  line-height: 1.62;
+  color: var(--bone-dim);
+}
+.finale__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: 0 0 38px;
+  padding: 0;
+  list-style: none;
+  background: var(--hairline-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.finale__stats li { padding: 22px 14px; background: rgba(8, 20, 18, 0.9); }
+.finale__stats b {
+  display: block;
+  font-family: var(--f-display);
+  font-size: var(--t-xl);
+  font-weight: 800;
+  font-stretch: 110%;
+  color: var(--sprout);
+}
+.finale__stats span {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--f-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.finale__acts { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 28px;
+  border-radius: var(--r-pill);
+  font-family: var(--f-data);
+  font-size: var(--t-sm);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.35s, color 0.35s, border-color 0.35s, box-shadow 0.35s, translate 0.35s var(--ease-spring);
+}
+.btn svg { width: 17px; height: 17px; }
+.btn--ghost { border: 1px solid var(--hairline); color: var(--bone-dim); }
+.btn--ghost:hover { border-color: var(--bone-dim); color: var(--bone); translate: 0 -2px; }
+.btn--solid {
+  background: var(--sprout);
+  color: var(--void);
+  border: 1px solid var(--sprout);
+  box-shadow: 0 16px 42px -14px rgba(140, 229, 99, 0.6);
+}
+.btn--solid:hover { background: var(--sprout-hi); border-color: var(--sprout-hi); translate: 0 -2px; }
+
+/* ============================================================
+   DAR / KISA EKRAN
+   ============================================================ */
+@media (max-width: 1180px) {
+  .readouts { display: none; }
+}
+@media (max-height: 760px) {
+  .core__halo { width: 240px; height: 240px; }
+  .core__ring { width: 150px; height: 150px; }
+  .core__ring--b { width: 100px; height: 100px; }
+  .chip { padding: 10px 8px 9px; min-width: 96px; }
+  .chip__ico { width: 32px; height: 32px; }
+}
+@media (max-width: 760px) {
+  .carbon { display: none; }
+  .gauge { min-width: 110px; margin-left: 14px; }
+  .chip__sub { display: none; }
+}
+
+/* ============================================================
+   AÇILIŞ ANI
+   ============================================================ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+  background:
+    radial-gradient(80% 60% at 50% 44%, rgba(4, 10, 11, 0.42) 0%, rgba(4, 10, 11, 0.78) 100%);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
+  pointer-events: none;                 /* sürükleme perdenin altından başlayabilir */
+  transition: opacity 1.1s var(--ease-out), visibility 1.1s;
+}
+.intro.is-done { opacity: 0; visibility: hidden; }
+.intro__logo {
+  height: clamp(44px, 6vh, 64px);
+  width: auto;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 4px 22px rgba(0, 0, 0, 0.55));
+  animation: introRise 1.2s var(--ease-out) both;
+}
+.intro__line1 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--t-xl);
+  font-weight: 800;
+  font-stretch: 114%;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--bone);
+  animation: introRise 1.2s var(--ease-out) 0.15s both;
+}
+.intro__line2 {
+  margin: 0;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--bone-dim);
+  animation: introRise 1.2s var(--ease-out) 0.3s both;
+}
+.intro__hint {
+  margin-top: 18px;
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(140, 229, 99, 0.4);
+  color: var(--sprout-hi);
+  background: rgba(6, 16, 12, 0.55);
+  animation: introRise 1.2s var(--ease-out) 0.45s both, hintPulse 3s ease-in-out 1.8s infinite;
+}
+@keyframes introRise { from { opacity: 0; translate: 0 22px; } to { opacity: 1; translate: 0 0; } }
+@keyframes hintPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(140,229,99,0.0); } 50% { box-shadow: 0 0 26px 2px rgba(140,229,99,0.28); } }
+
+/* ============================================================
+   KİLOMETRE TAŞI — dördün birinde beliren an
+   Sekiz yerleştirme düz bir liste gibi geçmesin; ritim kazansın.
+   ============================================================ */
+.milestone {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  translate: -50% -50%;
+  z-index: 48;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.5s var(--ease-out), transform 0.7s var(--ease-spring);
+}
+.milestone.is-show { opacity: 1; transform: scale(1); }
+.milestone__n {
+  font-family: var(--f-display);
+  font-size: clamp(3.4rem, 8vw, 7rem);
+  font-weight: 800;
+  font-stretch: 122%;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: transparent;
+  background: linear-gradient(170deg, #ffffff 0%, var(--sprout-hi) 52%, var(--emerald) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 8px 34px rgba(0, 0, 0, 0.75));
+}
+.milestone__t {
+  font-family: var(--f-data);
+  font-size: var(--t-sm);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--bone);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
+}

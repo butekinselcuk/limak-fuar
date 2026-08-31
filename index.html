@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Limak · COP31 Deneyimi</title>
+<meta name="description" content="Limak'ın 50 yıllık mirası ve yarattığı dünya — iki interaktif deneyim.">
+<link rel="stylesheet" href="assets/css/base.css?v=29">
+<link rel="stylesheet" href="assets/css/index.css?v=29">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238ce563'/%3E%3Cpath d='M11 8v13h10' stroke='%2304090a' stroke-width='3.4' fill='none' stroke-linecap='square'/%3E%3C/svg%3E">
+</head>
+<body class="home">
+
+<!-- ── üst çubuk ───────────────────────────────────────── -->
+<header class="topbar">
+  <span class="brand">
+    <img class="brand__logo" src="assets/img/logo-50yil.png" alt="Limak — 50. yıl" decoding="async">
+    <span class="brand__sep" aria-hidden="true"></span>
+    <span class="brand__text">Limak <em>· COP31</em></span>
+  </span>
+  <span class="topbar__clock eyebrow tabular" id="clock">--:--</span>
+</header>
+
+<!-- ── diptik ──────────────────────────────────────────── -->
+<main class="diptych" id="diptych">
+
+  <!-- ═══ SOL: WORLD WITH LIMAK ═══ -->
+  <a class="panel panel--world" href="world.html" data-panel="world">
+    <div class="panel__art">
+      <img class="prev prev--dead"  src="assets/img/scene/plate-dead.jpg"  alt="" decoding="async">
+      <img class="prev prev--alive" src="assets/img/scene/plate-alive.jpg" alt="" decoding="async">
+      <span class="prev__ring"></span>
+      <span class="panel__scrim"></span>
+    </div>
+
+    <div class="panel__body">
+      <span class="panel__index eyebrow">01 — İnteraktif</span>
+      <h2 class="panel__title">World<br>with Limak</h2>
+      <p class="panel__lede">Çorak bir araziye Limak'ın ürettiği her şeyi taşı. Rüzgâr, güneş, su, çelik ve beton merkeze yaklaştıkça dünya kendini yeniden kuruyor.</p>
+      <ul class="panel__meta">
+        <li><b class="tabular">8</b> sektör</li>
+        <li><b class="tabular">0→100</b> dönüşüm</li>
+        <li><b>Sürükle</b> &amp; bırak</li>
+      </ul>
+      <span class="panel__cta">
+        <span>Dünyayı kur</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+  </a>
+
+  <!-- ═══ SAĞ: 50 YIL ═══ -->
+  <a class="panel panel--time" href="timeline.html" data-panel="time">
+    <div class="panel__art">
+      <div class="strip" id="strip" aria-hidden="true"></div>
+      <canvas class="rail__px" id="railPx"></canvas>
+      <span class="panel__scrim"></span>
+    </div>
+
+    <div class="panel__body">
+      <span class="panel__index eyebrow">02 — Zaman çizelgesi</span>
+      <h2 class="panel__title">50 Yıl,<br>Bir Miras</h2>
+      <p class="panel__lede">1976'da bir müteahhitlik bürosu. Bugün 14 ülkede 8 sektör. Rayı kaydır, her durağın bugüne bıraktığı izi gör.</p>
+      <ul class="panel__meta">
+        <li><b class="tabular">1976</b> → <b class="tabular">2026</b></li>
+        <li><b class="tabular">14</b> ülke</li>
+        <li><b>Dokun</b> &amp; keşfet</li>
+      </ul>
+      <span class="panel__cta">
+        <span>Zamanda yürü</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+  </a>
+
+  <!-- yaşayan dikiş -->
+  <span class="seam" id="seam"><i></i></span>
+</main>
+
+<footer class="homefoot">
+  <span class="eyebrow">Limak Holding · 1976 — 2026</span>
+  <ul class="scalebar scalebar--home" id="homeScale" aria-label="Limak Şirketler Grubu ölçeği"></ul>
+  <span class="eyebrow">Mirastan etkiye</span>
+</footer>
+
+<span class="grain" aria-hidden="true"></span>
+<script src="assets/data/timeline.js?v=29"></script>
+<script src="assets/data/sectors.js?v=29"></script>
+<script src="assets/js/scalebar.js?v=29"></script>
+<script src="assets/js/home.js?v=29"></script>
+</body>
+</html>
