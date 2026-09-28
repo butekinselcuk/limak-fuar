@@ -2,27 +2,37 @@
  "w": 1920,
  "h": 1080,
  "core": [
-  960,
-  828
+  900,
+  640
  ],
  "order": [
-  "ruzgar",
-  "insaat",
-  "su",
+  "hidro",
   "cimento",
-  "teknoloji",
+  "jeotermal",
   "hava",
+  "kopru",
   "gunes",
+  "stadyum",
+  "gida",
+  "avm",
+  "port",
+  "otoyol",
+  "konut",
   "turizm"
  ],
  "regions": {
-  "ruzgar": {},
-  "insaat": {},
-  "su": {},
+  "hidro": {},
   "cimento": {},
-  "teknoloji": {},
+  "jeotermal": {},
   "hava": {},
+  "kopru": {},
   "gunes": {},
+  "stadyum": {},
+  "gida": {},
+  "avm": {},
+  "port": {},
+  "otoyol": {},
+  "konut": {},
   "turizm": {}
  }
 }

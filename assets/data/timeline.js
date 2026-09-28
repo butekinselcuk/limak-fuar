@@ -194,7 +194,7 @@ window.LIMAK_TIMELINE = [
   {
     year: 2018, sector: "havalimani",
     title: "İstanbul Havalimanı açıldı",
-    subtitle: "Limak'ın da ortağı olduğu konsorsiyumun inşa ettiği havalimanı hizmete girdi.",
+    subtitle: "Limak'ın da ortağı olduğu konsorsiyumun inşa ettiği havalimanı hizmete girdi; pay 2023'te devredildi.",
     body: "DHMİ'nin 3 Mayıs 2013'te açtığı ihaleyi 22 milyar 152 milyon euro ile Cengiz-Kolin-Limak-Mapa-Kalyon ortak girişim grubu kazandı; işletme süresi 25 yıl olarak belirlendi. Sözleşmesi 2014'te imzalanan projenin ilk fazı 29 Ekim 2018'de, yılda 90 milyon yolcu kapasitesiyle açıldı. Limak, İGA'daki payını 2023'te ortakları Cengiz ve Kalyon'a devretti.",
     stats: [
       { v: "90 mn", l: "1. faz kapasitesi" },
@@ -236,7 +236,7 @@ window.LIMAK_TIMELINE = [
     stats: [
       { v: "2.023 m", l: "Orta açıklık" },
       { v: "4,6 km", l: "Toplam uzunluk" },
-      { v: "318 m", l: "Kule yüksekliği" },
+      { v: "334 m", l: "Kule yüksekliği" },
       { v: "6 dk", l: "Boğaz geçişi" },
     ],
     shot: "Kırmızı beyaz kuleli asma köprü, boğaz üzerinde",
@@ -309,12 +309,12 @@ window.LIMAK_TIMELINE = [
     year: 2026, sector: "kurumsal",
     title: "Limak 50 yaşında",
     subtitle: "Üç kıtada 14 ülkede faaliyet gösteren grup yarım asrı geride bıraktı.",
-    body: "Limak Şirketler Grubu 50. yılını 17-18 Nisan 2026'da Antalya'da düzenlenen etkinlikle kutladı. Aralık 2025 itibarıyla 14 ülkede 8 sektörde 37.417 çalışanı bulunan grubun inşaat kolu, ENR'nin 2025 Dünyanın En Büyük 250 Uluslararası Müteahhitlik Şirketi listesinde 61. sırada yer aldı. Yönetim Kurulu Başkanı Ebru Özdemir, önümüzdeki dönemin ana eksenlerini dijitalleşme, sürdürülebilirlik, sosyal etki ve kurumsallaşma olarak tanımladı.",
+    body: "Limak Şirketler Grubu 50. yılını 17-18 Nisan 2026'da Antalya'da düzenlenen etkinlikle kutladı. Aralık 2025 itibarıyla 14 ülkede 8 sektörde 37.417 çalışanı bulunan grubun inşaat kolu, ENR'nin 13 Eylül 2026'da yayımlanan Dünyanın En Büyük 250 Uluslararası Müteahhitlik Şirketi listesinde bir önceki yıla göre on basamak yükselerek 51. sıraya çıktı; listedeki 48 Türk şirketi arasında üçüncü oldu. Yönetim Kurulu Başkanı Ebru Özdemir, önümüzdeki dönemin ana eksenlerini dijitalleşme, sürdürülebilirlik, sosyal etki ve kurumsallaşma olarak tanımladı.",
     stats: [
       { v: "37.417", l: "Çalışan (Ara. 2025)" },
       { v: "14", l: "Ülke" },
       { v: "8", l: "Sektör" },
-      { v: "61.", l: "ENR 2025 sırası" },
+      { v: "51.", l: "ENR 2026 sırası" },
     ],
     shot: "50. yıl kutlaması, modern kurumsal sahne",
   },

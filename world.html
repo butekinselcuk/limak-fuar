@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>World with Limak</title>
-<link rel="stylesheet" href="assets/css/base.css?v=29">
-<link rel="stylesheet" href="assets/css/world.css?v=29">
+<link rel="stylesheet" href="assets/css/base.css?v=54">
+<link rel="stylesheet" href="assets/css/world.css?v=54">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238ce563'/%3E%3Cpath d='M11 8v13h10' stroke='%2304090a' stroke-width='3.4' fill='none' stroke-linecap='square'/%3E%3C/svg%3E">
 </head>
 <body class="world">
@@ -14,14 +14,14 @@
 <div class="stage" id="stage">
 
   <!-- ── FOTOĞRAF KATMANLARI ─────────────────────────────
-       plate-dead : çorak arazi (taban)
-       plate-alive: aynı arazinin canlı hâli — merkezden dışa açılır
+       plate-base : aynı manzaranın sessiz sabah hâli (taban)
+       plate-alive: aynı manzaranın günün ışığındaki hâli — merkezden dışa açılır
        .sector    : her sektörün yapısı, kendi bölge maskesiyle
        Üçü de aynı ana fotoğrafın türevi olduğu için hizalama kusursuz.
   ────────────────────────────────────────────────────── -->
   <div class="scene" id="scene">
-    <img class="plate plate--dead"  id="plateDead"  src="assets/img/scene/plate-dead.jpg?v=29"  alt="" decoding="async">
-    <img class="plate plate--alive" id="plateAlive" src="assets/img/scene/plate-alive.jpg?v=29" alt="" decoding="async">
+    <img class="plate plate--base"  id="plateBase"  src="assets/img/scene/plate-base.jpg?v=54"  alt="" decoding="async">
+    <img class="plate plate--alive" id="plateAlive" src="assets/img/scene/plate-alive.jpg?v=54" alt="" decoding="async">
     <!-- bölgesel iyileşme: her yerleştirme kendi bölgesini anında yeşertir -->
     <div class="heals" id="heals"></div>
     <div class="sectors" id="sectors"></div>
@@ -53,7 +53,7 @@
         <path d="M20 9v22M9 20h22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
     </span>
-    <span class="core__label" id="coreLabel">Merkeze bırak</span>
+    <span class="core__label" id="coreLabel">Buraya bırak</span>
   </div>
 </div>
 
@@ -71,7 +71,7 @@
   </div>
 
   <div class="carbon" id="carbon">
-    <span class="carbon__lbl eyebrow">Karbon</span>
+    <span class="carbon__lbl eyebrow" id="carbonLbl">Karbon</span>
     <b class="carbon__val tabular" id="carbonVal">%0</b>
   </div>
 
@@ -84,11 +84,35 @@
 <!-- ═══ SEKTÖR OKUMALARI (sol) ═══ -->
 <aside class="readouts" id="readouts"></aside>
 
+<!-- ═══ DAL AÇILIR PANELİ — "tıklasın, seçenekler açılsın" ═══ -->
+<div class="subtray" id="subtray" hidden>
+  <div class="subtray__head">
+    <span class="subtray__title eyebrow" id="subtrayTitle"></span>
+    <button class="subtray__x" id="subtrayX" type="button" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="subtray__rail" id="subtrayRail"></div>
+</div>
+
+<!-- ═══ KAPI UYARISI — "çimento olmadan şehir olmaz" ═══ -->
+<div class="gatewarn" id="gatewarn" hidden role="status">
+  <span class="gatewarn__ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
+  </span>
+  <span class="gatewarn__txt">
+    <b id="gatewarnTxt"></b>
+    <span id="gatewarnWhy"></span>
+  </span>
+</div>
+
 <!-- ═══ ALT TEPSİ ═══ -->
 <footer class="tray" id="tray">
   <div class="tray__head">
-    <span class="tray__hint eyebrow" id="trayHint">Bir yatırımı sürükle ve merkeze bırak</span>
-    <span class="tray__count eyebrow tabular" id="trayCount">0 / 8</span>
+    <span class="tray__hint eyebrow" id="trayHint">Bir yatırımı seç, ışıyan bölgesine bırak</span>
+    <span class="tray__count eyebrow tabular" id="trayCount">0 / 13</span>
   </div>
   <div class="tray__rail" id="trayRail"></div>
 </footer>
@@ -107,12 +131,51 @@
   </div>
 </div>
 
+<!-- ═══ 2. AŞAMA GEÇİŞİ — "Şimdi dünyayı kurduk, etkileri azaltma vakti" ═══ -->
+<div class="phase2" id="phase2" hidden>
+  <div class="phase2__inner">
+    <span class="eyebrow phase2__eye">1. Aşama tamamlandı</span>
+    <h2 class="phase2__title">Dünyayı kurduk.<br><em>Şimdi etkileri azaltma vakti.</em></h2>
+    <p class="phase2__lede">Kurduğun her yatırımın bir izi var. Alttan bir yatırıma dokun,
+      o izi azaltacak önlemi seç — kararın sahada karşılığını göreceksin.</p>
+    <button class="btn btn--solid" id="phase2Btn" type="button">Azaltmaya başla
+      <svg viewBox="0 0 24 24"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ ÖNLEM PANELİ — yatırıma dokununca açılır ═══ -->
+<div class="fixpanel" id="fixpanel" hidden>
+  <div class="fixpanel__head">
+    <span class="fixpanel__title" id="fixTitle"></span>
+    <span class="fixpanel__meter" aria-hidden="true"><i id="fixFill"></i></span>
+    <b class="fixpanel__num tabular" id="fixNum"></b>
+    <button class="fixpanel__x" id="fixX" type="button" aria-label="Kapat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="fixpanel__rail" id="fixRail"></div>
+</div>
+
+<!-- ═══ BUNU BİLİYOR MUYDUNUZ — 2. aşamanın finali ═══ -->
+<div class="didyou" id="didyou" hidden>
+  <div class="didyou__panel" role="dialog" aria-modal="true" aria-labelledby="didyouEye">
+    <span class="eyebrow didyou__eye" id="didyouEye">Bunu biliyor muydunuz?</span>
+    <b class="didyou__pick" id="didyouPick"></b>
+    <p class="didyou__txt" id="didyouTxt"></p>
+    <button class="btn btn--solid" id="didyouBtn" type="button">Devam
+      <svg viewBox="0 0 24 24"><path d="M4 12h15m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</div>
+
 <!-- ═══ FİNAL ═══ -->
 <div class="finale" id="finale" hidden>
   <div class="finale__inner">
-    <span class="eyebrow finale__eye">Dünya tamamlandı</span>
-    <h2 class="finale__title">Limak'ın kurduğu<br><em>dünya</em></h2>
-    <p class="finale__lede">Sekiz sektör, tek bir yaşanabilir alan. Bu ekranda yaptığınız şeyi Limak elli yıldır sahada yapıyor.</p>
+    <span class="eyebrow finale__eye">Bölge tamamlandı</span>
+    <h2 class="finale__title">Geleceği<br><em>birlikte kurduk</em></h2>
+    <p class="finale__lede">Şimdi aldığımız kararlarla geleceği şekillendirme vakti. Enerjiden altyapıya, ulaşımdan turizme; attığımız her adım geleceğin şehirlerini dönüştürüyor.</p>
     <ul class="finale__stats" id="finaleStats"></ul>
     <div class="finale__acts">
       <button class="btn btn--ghost" id="againBtn">Yeniden kur</button>
@@ -126,8 +189,13 @@
 <!-- açılış anı: fuar ziyaretçisini karşılar, ilk dokunuşta çekilir -->
 <div class="intro" id="intro" aria-hidden="true">
   <img class="intro__logo" src="assets/img/logo-50yil.png" alt="" decoding="async">
-  <p class="intro__line1">Karşınızda çorak bir dünya.</p>
-  <p class="intro__line2">Limak'ın sekiz sektörünü yerleştirin —<br>dünyayı birlikte yeniden kuralım.</p>
+  <p class="intro__line1">Geleceği birlikte kuralım.</p>
+  <p class="intro__line2">Limak'ın yatırımlarını sahaya taşıyın —<br>bir vadinin nasıl yaşayan bir bölgeye dönüştüğünü görün.</p>
+  <ol class="intro__how" aria-label="Nasıl çalışır">
+    <li><b>1</b><span>Alttan bir yatırım seçin</span></li>
+    <li><b>2</b><span>Işıyan kendi bölgesine sürükleyin</span></li>
+    <li><b>3</b><span>Dünya kurulunca etkilerini azaltın</span></li>
+  </ol>
   <ul class="scalebar" id="introScale" aria-label="Limak Şirketler Grubu ölçeği"></ul>
   <span class="intro__hint eyebrow">Başlamak için bir yatırımı merkeze sürükleyin</span>
 </div>
@@ -135,9 +203,10 @@
 <span class="vignette" aria-hidden="true"></span>
 <span class="grain" aria-hidden="true"></span>
 
-<script src="assets/data/sectors.js?v=29"></script>
-<script src="assets/data/scene.js?v=29"></script>
-<script src="assets/js/world.js?v=29"></script>
-<script src="assets/js/scalebar.js?v=29"></script>
+<script src="assets/data/sectors.js?v=54"></script>
+<script src="assets/data/mitigation.js?v=54"></script>
+<script src="assets/data/scene.js?v=54"></script>
+<script src="assets/js/world.js?v=54"></script>
+<script src="assets/js/scalebar.js?v=54"></script>
 </body>
 </html>

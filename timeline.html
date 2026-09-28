@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Limak · 50 Yıl</title>
-<link rel="stylesheet" href="assets/css/base.css?v=29">
-<link rel="stylesheet" href="assets/css/timeline.css?v=29">
+<link rel="stylesheet" href="assets/css/base.css?v=47">
+<link rel="stylesheet" href="assets/css/timeline.css?v=47">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238ce563'/%3E%3Cpath d='M11 8v13h10' stroke='%2304090a' stroke-width='3.4' fill='none' stroke-linecap='square'/%3E%3C/svg%3E">
 </head>
 <body class="tl">
@@ -32,27 +32,30 @@
 <!-- ═══ SAHNE ═══ -->
 <main class="stagewrap">
 
-  <!-- dev yıl -->
+  <!-- dev yıl: kilometre sayacı gibi dönen rakamlar -->
   <div class="yearbig" aria-hidden="true">
-    <span class="yearbig__num tabular" id="yearBig">1976</span>
-    <span class="yearbig__ghost tabular" id="yearGhost"></span>
+    <div class="odo" id="odo"></div>
+    <span class="yearbig__label eyebrow" id="yearLabel"></span>
   </div>
+  <span class="sr-only" id="yearBig" aria-live="polite"></span>
 
-  <!-- içerik kartı -->
-  <article class="card" id="card">
-    <div class="card__media">
-      <img class="card__img" id="cardImg" alt="" decoding="async">
-      <span class="card__mediafall" id="cardFall"></span>
-      <span class="card__sector eyebrow" id="cardSector"></span>
-    </div>
-    <div class="card__body">
-      <span class="card__year eyebrow tabular" id="cardYear"></span>
-      <h2 class="card__title" id="cardTitle"></h2>
-      <p class="card__sub" id="cardSub"></p>
-      <p class="card__text" id="cardText"></p>
-      <ul class="card__stats" id="cardStats"></ul>
-    </div>
-  </article>
+  <!-- içerik: kitap sayfası gibi açılır -->
+  <div class="book" id="book">
+    <article class="card" id="card">
+      <div class="card__media">
+        <img class="card__img" id="cardImg" alt="" decoding="async">
+        <span class="card__mediafall" id="cardFall"></span>
+        <span class="card__sector eyebrow" id="cardSector"></span>
+      </div>
+      <div class="card__body">
+        <span class="card__year eyebrow tabular" id="cardYear"></span>
+        <h2 class="card__title" id="cardTitle"></h2>
+        <p class="card__sub" id="cardSub"></p>
+        <p class="card__text" id="cardText"></p>
+        <ul class="card__stats" id="cardStats"></ul>
+      </div>
+    </article>
+  </div>
 </main>
 
 <!-- ═══ RAY ═══ -->
@@ -66,7 +69,7 @@
 
 <span class="grain" aria-hidden="true"></span>
 
-<script src="assets/data/timeline.js?v=29"></script>
-<script src="assets/js/timeline.js?v=29"></script>
+<script src="assets/data/timeline.js?v=47"></script>
+<script src="assets/js/timeline.js?v=47"></script>
 </body>
 </html>
