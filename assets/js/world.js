@@ -897,6 +897,38 @@
   }
 
   /* ============================================================
+     AÇILIŞ — ekrana dokununca süreç başlar
+     Ziyaretçi ilk ekranda "sürükle" talimatını anlamıyordu; artık
+     perdenin herhangi bir yerine dokunmak yeterli. Ardından tepsi
+     kısa bir süre vurgulanır ki ilk adım (yatırım seçmek) belli olsun.
+     ============================================================ */
+  let introT = 0;
+  function introyuKapat() {
+    const el = $("intro");
+    if (!el || el.classList.contains("is-done")) return;
+    el.classList.add("is-done");
+    lastInput = performance.now();
+    Snd.lift();
+    trayHint.classList.add("is-alert");
+    document.body.classList.add("is-tray-cue");
+    clearTimeout(introT);
+    introT = setTimeout(() => {
+      if (!drag) trayHint.classList.remove("is-alert");
+      document.body.classList.remove("is-tray-cue");
+    }, 2800);
+  }
+  {
+    const el = $("intro");
+    /* pointerdown: dokunmatik ekranda anında tepki verir ve sahnedeki diğer
+       dokunma işleyicilerinin "click"i yutmasından etkilenmez */
+    el?.addEventListener("pointerdown", (e) => { e.stopPropagation(); introyuKapat(); });
+    el?.addEventListener("click", (e) => { e.stopPropagation(); introyuKapat(); });
+    el?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); introyuKapat(); }
+    });
+  }
+
+  /* ============================================================
      YERLEŞTİRME
      ============================================================ */
   let punchT = 0, factT = 0, factT2 = 0, msT = 0, msT2 = 0;
