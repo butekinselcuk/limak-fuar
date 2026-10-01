@@ -49,6 +49,11 @@
   const surge = document.createElement("span");
   surge.className = "surge";
   stage.appendChild(surge);
+  const flash = document.createElement("span");
+  flash.className = "flash";
+  flash.setAttribute("aria-hidden", "true");
+  stage.appendChild(flash);
+  const plateAlive = $("plateAlive");
 
   const placed = new Set();
   let coreScreen = { x: 0, y: 0 }, sceneScale = 1, lastInput = performance.now();
@@ -88,6 +93,12 @@
      SEKTÖR KATMANLARI
      ============================================================ */
   const layerOf = {}, healOf = {};
+  function setMaske(el, url) {
+    const v = `url("${url}")`;
+    el.style.webkitMaskImage = v;
+    el.style.maskImage = v;
+    el.dataset.mask = "1";
+  }
   function buildLayers() {
     const host = $("sectors");
     const heals = $("heals");
@@ -114,7 +125,11 @@
       d.style.backgroundImage = `url("${abs(img)}?v=${AV}")`;
       if (rgn.z) d.style.zIndex = String(rgn.z);
       const mask = rgn.mask || abs(`assets/img/scene/m-${s.id}.png`);
-      d.style.setProperty("--rgn", `url("${mask}")`);
+      // AKICILIK: maske doğrudan mask-image'e bir kez yazılır. Önceden
+      // var(--rgn) üzerinden veriliyordu; maskeler 10-30 KB'lık data: metni
+      // olduğu için tarayıcı HER stil hesabında bu metni yeniden ayrıştırıyor,
+      // yerleştirme anında kare başına ~24 ms harcıyordu.
+      setMaske(d, mask);
       host.appendChild(d);
       layerOf[s.id] = d;
 
@@ -123,7 +138,7 @@
         const h = document.createElement("div");
         h.className = rgn.heal ? "heal heal--iz" : "heal";
         h.dataset.sector = s.id;
-        if (rgn.heal) h.style.setProperty("--hmask", `url("${rgn.heal}")`);
+        if (rgn.heal) setMaske(h, rgn.heal);
         h.style.backgroundImage = `url("${abs("assets/img/scene/plate-alive.jpg")}?v=${AV}")`;
         heals.appendChild(h);
         healOf[s.id] = h;
@@ -135,6 +150,18 @@
      ÖLÇÜM — object-fit:cover eşlemesi
      ============================================================ */
   const zoneScr = {};              // bölge merkezleri ekran uzayında
+  /* AKICILIK: stil değeri yalnızca değiştiyse yazılır. measure() menü
+     açılıp kapanırken de çağrılıyor; aynı değeri yeniden yazmak bile
+     sahnedeki 300+ elemanı stil hesabına sokuyordu. */
+  const _son = new WeakMap();
+  function yaz(el, k, v) {
+    if (!el) return;
+    let m = _son.get(el);
+    if (!m) { m = {}; _son.set(el, m); }
+    if (m[k] === v) return;
+    m[k] = v;
+    el.style.setProperty(k, v);
+  }
   function measure() {
     const b = stage.getBoundingClientRect();
     sceneScale = Math.max(b.width / SW, b.height / SH);
@@ -144,19 +171,19 @@
 
     const px = ((coreScreen.x - b.left) / b.width) * 100;
     const py = ((coreScreen.y - b.top) / b.height) * 100;
-    scene.style.setProperty("--cx", px + "%");
-    scene.style.setProperty("--cy", py + "%");
-    surge.style.setProperty("--sx", px + "%");
-    surge.style.setProperty("--sy", py + "%");
+    yaz(scene, "--cx", px + "%");
+    yaz(scene, "--cy", py + "%");
+    yaz(surge, "--sx", px + "%");
+    yaz(surge, "--sy", py + "%");
 
-    core.style.left = coreScreen.x - b.left + "px";
-    core.style.top = coreScreen.y - b.top + "px";
+    yaz(core, "left", coreScreen.x - b.left + "px");
+    yaz(core, "top", coreScreen.y - b.top + "px");
 
     /* bölge maskeleri arka planla aynı cover dönüşümünü kullansın */
-    scene.style.setProperty("--mw", (SW * sceneScale).toFixed(1) + "px");
-    scene.style.setProperty("--mh", (SH * sceneScale).toFixed(1) + "px");
-    scene.style.setProperty("--mx", dx.toFixed(1) + "px");
-    scene.style.setProperty("--my", dy.toFixed(1) + "px");
+    yaz(scene, "--mw", (SW * sceneScale).toFixed(1) + "px");
+    yaz(scene, "--mh", (SH * sceneScale).toFixed(1) + "px");
+    yaz(scene, "--mx", dx.toFixed(1) + "px");
+    yaz(scene, "--my", dy.toFixed(1) + "px");
 
     /* bölgeler: sahne pikselini object-fit:cover eşlemesiyle ekrana taşı */
     for (const id in SCENE.regions) {
@@ -168,10 +195,10 @@
                       px: (sx / b.width) * 100, py: (sy / b.height) * 100 };
       const h = healOf[id];
       if (h) {
-        h.style.setProperty("--hx", zoneScr[id].px + "%");
-        h.style.setProperty("--hy", zoneScr[id].py + "%");
-        h.style.setProperty("--hrx", (zoneScr[id].rx * 1.5).toFixed(0) + "px");
-        h.style.setProperty("--hry", (zoneScr[id].ry * 1.9).toFixed(0) + "px");
+        yaz(h, "--hx", zoneScr[id].px + "%");
+        yaz(h, "--hy", zoneScr[id].py + "%");
+        yaz(h, "--hrx", (zoneScr[id].rx * 1.5).toFixed(0) + "px");
+        yaz(h, "--hry", (zoneScr[id].ry * 1.9).toFixed(0) + "px");
       }
     }
 
@@ -181,11 +208,17 @@
     const stTop = st && !st.hidden ? st.getBoundingClientRect().top : Infinity;
     const altUst = Math.min(tr.top, stTop);
     const altYuk = Math.max(0, b.height - altUst);
-    document.documentElement.style.setProperty("--ui-alt", altYuk.toFixed(0) + "px");
+    yaz(document.documentElement, "--ui-alt", altYuk.toFixed(0) + "px");
     // Okumalar artık üst şeritte (gökyüzü bandı); sütun sıkıştırması gerekmez.
 
-    fx.width = b.width * DPR; fx.height = b.height * DPR;
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // Tuvalin boyutunu atamak onu SİLER ve ekran kartında yeniden ayırır;
+    // yalnızca boyut gerçekten değiştiyse yapılır (yoksa her menü aç/kapa
+    // anında halka/kıvılcım katmanı bir kare boş kalıp titriyordu).
+    const fw = Math.round(b.width * DPR), fh = Math.round(b.height * DPR);
+    if (fx.width !== fw || fx.height !== fh) {
+      fx.width = fw; fx.height = fh;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
     FXW = b.width; FXH = b.height;
     setBloom();
   }
@@ -200,7 +233,9 @@
     // yeşertiyordu; sonraki yedi bırakma anlamsızlaşıyordu. 0.82 ile her
     // adım gözle görülür ve eşit bir genişleme yapar.
     const r = far * 1.06 * Math.pow(p, 0.82) + extra;
-    scene.style.setProperty("--bloom", r.toFixed(0) + "px");
+    // yalnızca onu kullanan katmana yazılır: sahneye yazılınca 25+ katmanın
+    // hepsi her değişimde stil hesabına giriyordu
+    yaz(plateAlive || scene, "--bloom", r.toFixed(0) + "px");
   }
 
   /* ============================================================
@@ -841,7 +876,8 @@
     layerOf[drag.sector.id]?.style.setProperty("--ghost", (eased * 0.72).toFixed(3));
     surge.style.opacity = (eased * 0.85).toFixed(3);
     surge.style.setProperty("--sr", (240 + eased * 480) * sceneScale + "px");
-    setBloom(eased * 260 * sceneScale);
+    // AKICILIK: burada setBloom çağrılıyordu; her fare hareketinde tam ekran
+    // fotoğraf maskesi yeniden çiziliyordu. Yakınlık ışığını 'surge' zaten veriyor.
 
     const near = u < 1;
     if (near !== drag.near) {
@@ -1027,8 +1063,10 @@
       burst(Math.round(46 + step * 60), rgb);
       burst(Math.round(18 + step * 30), "255,255,255");
       seedMotes(Math.round(10 + step * 22));
-      stage.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.18)" }, { filter: "brightness(1)" }],
-        { duration: 560, easing: "cubic-bezier(.16,1,.3,1)" });
+      // parlama: yalnızca opaklığı değişen bir perde (filter tüm sahneyi yeniden birleştiriyordu)
+      if (z) { flash.style.setProperty("--fx", z.px + "%"); flash.style.setProperty("--fy", z.py + "%"); }
+      flash.animate([{ opacity: 0 }, { opacity: 1, offset: 0.28 }, { opacity: 0 }],
+        { duration: 620, easing: "cubic-bezier(.16,1,.3,1)" });
     }
 
     showMilestone(placed.size);
@@ -1361,10 +1399,40 @@
     if (placed.size > 0 && performance.now() - lastInput > 150000) reset();
   }, 10000);
 
+  /* AKICILIK: maskeler ve fotoğraflar açılışta bir kez çözülür (decode).
+     Aksi hâlde her yatırımın maskesi ilk göründüğü anda çözülüyor ve o
+     kare gecikiyor ya da katman bir an eksik çiziliyordu. */
+  function onCoz() {
+    const urls = new Set();
+    const cssUrl = (v) => { const m = /url\(["']?(.*?)["']?\)/.exec(v || ""); return m && m[1]; };
+    document.querySelectorAll(".sector, .heal").forEach((el) => {
+      const cs = el.style;
+      [cssUrl(cs.backgroundImage), cssUrl(cs.maskImage || cs.webkitMaskImage)]
+        .forEach((u) => u && urls.add(u));
+    });
+    let i = 0;
+    const list = [...urls];
+    // tek seferde değil, boşta kalan zamanlarda sırayla: açılış takılmasın
+    const next = () => {
+      if (i >= list.length) return;
+      const im = new Image();
+      im.decoding = "async";
+      im.src = list[i++];
+      (im.decode ? im.decode() : Promise.resolve()).catch(() => {}).finally(() => {
+        if (window.requestIdleCallback) requestIdleCallback(next, { timeout: 300 });
+        else setTimeout(next, 30);
+      });
+      onCozulen.push(im);           // referans tutulur ki önbellekten düşmesin
+    };
+    next();
+  }
+  const onCozulen = [];
+
   const rgbOf = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(1).slice(i, i + 2), 16)).join(",");
 
   /* ============================================================ */
   buildLayers();
+  onCoz();
   buildTray();
   buildReadouts();
   tazeleOkumalar();

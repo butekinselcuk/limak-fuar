@@ -141,9 +141,7 @@
    Hepsi aynı ana fotoğrafın türevi; maskeler yalnızca
    "ne kadarı görünsün" sorusunu yanıtlar.
    ============================================================ */
-@property --bloom { syntax: "<length>"; inherits: true; initial-value: 0px; }
-@property --wave  { syntax: "<length>"; inherits: false; initial-value: 0px; }
-@property --hr    { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+@property --bloom { syntax: "<length>"; inherits: false; initial-value: 0px; }  /* yalnız .plate--alive kullanır */
 
 .scene {
   position: absolute;
@@ -151,9 +149,12 @@
   overflow: hidden;
   --cx: 50%;
   --cy: 76.7%;          /* çekirdek: 828/1080 */
-  --bloom: 0px;
   /* kamera dalışı: yerleştirilen bölgeye kısa, sinematik yaklaşma */
   transition: transform 2s cubic-bezier(0.22, 0.9, 0.28, 1);
+  /* AKICILIK: will-change:transform raster ölçeğini sabitler. Olmazsa
+     tarayıcı zoom başında ve sonunda 20+ tam ekran katmanı yeni ölçekte
+     yeniden çizmeye kalkar; yetişemediği karelerde ekran siyah görünür. */
+  will-change: transform;
 }
 .scene.is-punch { transform: scale(1.13); }
 .plate {
@@ -202,15 +203,18 @@
   inset: 0;
   background-size: cover;
   background-position: center;
-  --hr: 0%;
+  /* AKICILIK: önceden maske yarıçapı (--hr) 2.3 sn boyunca her karede
+     büyütülüyordu; bu, tam ekran fotoğrafın her karede işlemcide yeniden
+     çizilmesi demekti. Artık maske SABİT (son hâli) ve yalnızca opaklık
+     değişiyor — bunu ekran kartı tek başına, çizim yapmadan halleder. */
   -webkit-mask-image: radial-gradient(ellipse var(--hrx, 400px) var(--hry, 200px) at var(--hx, 50%) var(--hy, 50%),
-                      #000 calc(var(--hr) * 0.34), rgba(0,0,0,.45) calc(var(--hr) * 0.72), transparent var(--hr));
+                      #000 56%, rgba(0,0,0,.45) 119%, transparent 165%);
   mask-image: radial-gradient(ellipse var(--hrx, 400px) var(--hry, 200px) at var(--hx, 50%) var(--hy, 50%),
-              #000 calc(var(--hr) * 0.34), rgba(0,0,0,.45) calc(var(--hr) * 0.72), transparent var(--hr));
-  transition: --hr 2.3s var(--ease-out);
-  will-change: mask-image;
+              #000 56%, rgba(0,0,0,.45) 119%, transparent 165%);
+  opacity: 0;
+  transition: opacity 1.8s var(--ease-out);
 }
-.heal.is-on { --hr: 165%; }
+.heal.is-on { opacity: 1; }
 /* Ayak izine göre canlanma: yatırımın çevresi tam kendi biçiminde, yumuşak
    bir hâleyle canlanır. Maske arka planla aynı cover geometrisine oturur. */
 .heal.heal--iz {
@@ -224,7 +228,8 @@
   mask-repeat: no-repeat;
   opacity: 0;
   transition: opacity 1.6s var(--ease-out);
-  will-change: opacity;
+  /* will-change kaldırıldı: 13 katmanı sürekli GPU belleğinde tutuyordu (~200 MB);
+     tarayıcı geçiş sırasında katmanı kendisi yükseltip sonra serbest bırakır */
 }
 .heal.heal--iz.is-on { opacity: 1; }
 
@@ -235,31 +240,43 @@
   inset: 0;
   background-size: cover;
   background-position: center;
-  --wave: 0px;
-  -webkit-mask-image: var(--rgn), radial-gradient(circle var(--wave) at var(--cx) var(--cy),
-                      #000 74%, rgba(0,0,0,.4) 92%, transparent 100%);
-  mask-image: var(--rgn), radial-gradient(circle var(--wave) at var(--cx) var(--cy),
-              #000 74%, rgba(0,0,0,.4) 92%, transparent 100%);
+  /* AKICILIK: eskiden bölge maskesi, merkezden büyüyen bir dalga
+     gradyanıyla kesiştiriliyordu ve dalga 1.5 sn boyunca her karede
+     yeniden hesaplanıyordu. Bölgeler küçük olduğu için dalga zaten
+     seçilmiyordu; tek sabit maske + opaklık aynı görüntüyü çizimsiz verir. */
+  -webkit-mask-image: var(--rgn);
+  mask-image: var(--rgn);
   /* Maske, arka planla AYNI cover geometrisine oturtulur; yoksa 16:9
      olmayan pencerede maske ile fotoğraf birbirinden kayar ve yapının
      bir kısmı maske deliğinin dışında kalır. Değerleri measure() yazar. */
-  -webkit-mask-size: var(--mw, 100%) var(--mh, 100%), auto;
-  mask-size: var(--mw, 100%) var(--mh, 100%), auto;
-  -webkit-mask-position: var(--mx, 0) var(--my, 0), center;
-  mask-position: var(--mx, 0) var(--my, 0), center;
+  -webkit-mask-size: var(--mw, 100%) var(--mh, 100%);
+  mask-size: var(--mw, 100%) var(--mh, 100%);
+  -webkit-mask-position: var(--mx, 0) var(--my, 0);
+  mask-position: var(--mx, 0) var(--my, 0);
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  mask-composite: intersect;
   opacity: 0;
-  transition: opacity 0.5s var(--ease-out), --wave 1.5s var(--ease-out);
+  transition: opacity 0.7s var(--ease-out);
 }
-.sector.is-on { opacity: 1; --wave: 2600px; }
+.sector.is-on { opacity: 1; }
 /* sürükleme önizlemesi: yapı hayalet gibi belirir */
 .sector.is-ghost {
   opacity: var(--ghost, 0);
-  --wave: 2600px;
   filter: brightness(1.25) saturate(0.5);
   transition: opacity 0.18s linear;
+}
+
+/* yerleştirme parlaması: eskiden tüm sahneye filter:brightness veriliyordu;
+   bu, 20+ tam ekran katmanı tek yüzeyde yeniden birleştirmeye zorluyordu.
+   Aynı "ışık patlaması" hissi sadece opaklığı değişen bir perdeyle verilir. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(70% 70% at var(--fx, 50%) var(--fy, 60%),
+              rgba(255, 252, 235, 0.22) 0%, rgba(255, 252, 235, 0.10) 45%, rgba(255, 252, 235, 0.05) 100%);
 }
 
 /* ortak son kalibrasyon: tüm katmanlar aynı ışığa oturur */
@@ -285,9 +302,9 @@
   border-radius: var(--r-md);
   border: 1px solid color-mix(in srgb, var(--fc, var(--sprout)) 55%, transparent);
   border-left-width: 3px;
-  background: rgba(5, 13, 14, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* backdrop-filter kaldırıldı: zoom sırasında arkası her karede değiştiği
+     için bulanıklık her karede yeniden hesaplanıyordu. Zemin zaten opak. */
+  background: rgba(5, 13, 14, 0.93);
   box-shadow: 0 22px 60px -18px rgba(0, 0, 0, 0.85),
               0 0 34px -8px color-mix(in srgb, var(--fc, var(--sprout)) 55%, transparent);
   opacity: 0;
@@ -1422,3 +1439,26 @@ body.is-tray-cue .chip:not(.is-placed):not(.is-drag) {
 
 /* 2. aşamada merkez hedefi ve sürükleme ipucu görünmez */
 body.is-asama2 .core { opacity: 0; pointer-events: none; }
+
+
+/* ============================================================
+   AKICILIK — dünya ekranına özel performans ayarları
+   ============================================================ */
+/* Gürültü dokusu: ekranın 4 katı boyutunda, en üstte ve mix-blend-mode
+   ile tüm sayfaya karıştırılıyordu. %3,5 opaklıkla neredeyse görünmezken
+   tarayıcıyı her karede bütün ekranı ayrı bir yüzeye çizip yeniden
+   harmanlamaya zorluyordu (zayıf ekran kartında siyah titremenin başlıca
+   nedeni). Aynı doku, harmanlamasız ve sabit olarak ekran boyutunda. */
+.world .grain {
+  inset: 0;
+  mix-blend-mode: normal;
+  opacity: 0.028;
+  animation: none;
+  background-repeat: repeat;
+}
+/* gizlenmiş katmanlardaki sonsuz animasyonlar arka planda dönmesin */
+.intro.is-done .intro__hint,
+.intro.is-done .intro__how li,
+.boot.is-done .boot__bar i { animation: none; }
+.core.is-full .core__halo,
+.core.is-full .core__ring { animation: none; }
