@@ -28,8 +28,9 @@
      2. aşamada (etki azaltma) alınan önlemlerle bu pay geri kazanılır.
      Toplam 100 olacak şekilde dağıtıldı. */
   const ETKI = {
-    cimento: 16, port: 12, hava: 12, konut: 9, stadyum: 6, kopru: 7, otoyol: 8,
-    avm: 6, gunes: 3, hidro: 4, jeotermal: 3, gida: 7, turizm: 7,
+    // 02.10: AVM kalktı; payı konut/stadyum/gıda/turizm'e dağıtıldı (toplam 100)
+    cimento: 16, port: 12, hava: 12, konut: 12, stadyum: 7, kopru: 7, otoyol: 8,
+    gunes: 3, hidro: 4, jeotermal: 3, gida: 8, turizm: 8,
   };
 
   /* görsel önbelleği: script sürümü görsellere de damgalanır; sahne
@@ -168,6 +169,7 @@
     const dx = (b.width - SW * sceneScale) / 2;
     const dy = (b.height - SH * sceneScale) / 2;
     coreScreen = { x: b.left + dx + CX * sceneScale, y: b.top + dy + CY * sceneScale };
+    sahneOf.x = b.left + dx; sahneOf.y = b.top + dy;
 
     const px = ((coreScreen.x - b.left) / b.width) * 100;
     const py = ((coreScreen.y - b.top) / b.height) * 100;
@@ -221,6 +223,7 @@
     }
     FXW = b.width; FXH = b.height;
     setBloom();
+    if (Object.keys(pusOf).length) pusYerlestir();
   }
 
   /* canlı arazinin açılım yarıçapı: ilerlemeyle büyür */
@@ -318,9 +321,8 @@
       for (const [ox, , s] of ptsFor("hava", 6, 442))     // pist kenar ışıkları
         glowDot(z.x + ox * z.rx * 0.85, z.y + z.ry * 0.34, 1.5,
                 "196,180,255", 0.28 + 0.5 * Math.max(0, Math.sin(t * 2.4 + s * 6.28)));
-      const p = (t * 0.16) % 1;                            // yaklaşan uçak
-      glowDot(z.x - z.rx * 0.95 + p * z.rx * 1.9, z.y - z.ry * 0.2,
-              1.8 * sceneScale, "255,255,255", Math.sin(Math.PI * p) * 0.7);
+      // (02.10) eski "yaklaşan uçak" ışık noktası kalktı: gerçek uçak
+      // iniş-kalkışı aşağıdaki UÇAK bölümünde çiziliyor
     },
     otoyol(t, z) {
       // iki yönde akan farlar — yol dikey uzandığı için dikey akar
@@ -349,7 +351,7 @@
         if ((t * 1.6 + s * 4) % 3 < 0.5)
           glowDot(z.x + ox * z.rx * 0.5, z.y + z.ry * 0.5, 1.6, "232,250,255", 0.55);
       // enerji hattı: baraj -> en yakın yerleşim
-      const c = zoneScr.konut || zoneScr.avm;
+      const c = zoneScr.konut;
       if (!c) return;
       const mx = (z.x + c.x) / 2, my = Math.min(z.y, c.y) - 80 * sceneScale;
       ctx.strokeStyle = "rgba(120,225,255,0.06)"; ctx.lineWidth = 1.3;
@@ -387,11 +389,6 @@
         const a = 0.35 + 0.25 * Math.max(0, Math.sin(t * 1.4 + i * 1.7));
         glowDot(z.x + ox * z.rx, z.y + oy * z.ry, 1.4 * sceneScale, "255,248,225", a);
       });
-    },
-    avm(t, z) {
-      for (const [ox, oy, s] of ptsFor("avm", 8, 481))     // otopark ve cephe
-        glowDot(z.x + ox * z.rx * 0.72, z.y + oy * z.ry * 0.5, 1.3 * sceneScale,
-                "255,226,180", 0.22 + 0.34 * Math.max(0, Math.sin(t * 1.3 + s * 6.28)));
     },
     konut(t, z) {
       for (const [ox, oy, s] of ptsFor("konut", 10, 313)) {
@@ -466,6 +463,360 @@
     }
   }
 
+  /* ============================================================
+     2. AŞAMA ÖNLEM EFEKTLERİ (02.10) — "decarbonization yapılırken
+     değişiklikler belirgin olmalı". Alınan her önlem sahnede SÜREKLİ
+     görünür bir karşılık bırakır; geri alınınca kaybolur.
+       yeni   : GES ile yatırım arasında gidip gelen enerji zerreleri
+       akil   : limanda yanıp sönen lojistik takip ışıkları (gıdada
+                akıllı enerji ağı)
+       led    : terminal binası aydınlanır, pist ışıkları güçlenir
+       elek   : elektrikli araçlar — mavi, hareketli ışıklar
+       sarj   : şarj noktalarında atan yeşil halkalar
+       iklim  : yapının üstünde ince koruma kubbesi
+       su/yagmur : yağmur suyu hasadı — süzülen damlalar
+       atik   : geri kazanım döngüsü
+       tedarik: dışarıdan yapıya akan sorumlu tedarik hattı
+       yakit  : alternatif yakıt — fırında yeşil alev
+       ccus   : bacadan yükselen karbon geri yakalanır
+     ============================================================ */
+  const sahneOf = { x: 0, y: 0 };                 // measure() yazar
+  const ekr = (x, y) => ({ x: sahneOf.x + x * sceneScale, y: sahneOf.y + y * sceneScale });
+  /* sahne pikselinde ölçülen noktalar (plate-dunya.jpg üzerinde) */
+  const FXN = {
+    limanSaha: [[280, 620], [330, 627], [380, 595], [425, 585], [280, 660], [225, 680],
+                [310, 650], [350, 610], [250, 635], [200, 690], [400, 575], [440, 580]],
+    terminal: [785, 478, 885, 498],               // x0, y0, x1, y1
+    kule: [846, 440],
+    pistUzak: [[740, 363], [767, 363]],           // uzak uç sol/sağ kenar
+    pistYakin: [[588, 514], [652, 506]],          // yakın uç sol/sağ kenar
+  };
+  const kimlikTohum = (s) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 997, 7) / 997;
+  const bez = (a, c, b, p) => {
+    const q = 1 - p;
+    return { x: q * q * a.x + 2 * q * p * c.x + p * p * b.x, y: q * q * a.y + 2 * q * p * c.y + p * p * b.y };
+  };
+
+  function enerjiAkisi(t, g, z, id) {
+    if (!g) return;
+    const c = { x: (g.x + z.x) / 2, y: Math.min(g.y, z.y) - 130 * sceneScale };
+    // hattın kendisi: ince, altın rengi bir enerji yolu
+    ctx.strokeStyle = "rgba(255,214,110,0.30)";
+    ctx.lineWidth = 1.8 * sceneScale;
+    ctx.setLineDash([3 * sceneScale, 6 * sceneScale]);
+    ctx.lineDashOffset = -t * 40;
+    ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.quadraticCurveTo(c.x, c.y, z.x, z.y); ctx.stroke();
+    ctx.setLineDash([]);
+    const tohum = kimlikTohum(id);
+    // GES → yatırım (gelen enerji) ve yatırım → GES (dönüş): "gitsin gelsin"
+    for (let i = 0; i < 7; i++) {
+      const gidis = i < 4;
+      let p = ((t / 3.0) + tohum + i / (gidis ? 4 : 3)) % 1;
+      if (!gidis) p = 1 - p;
+      const P = bez(g, c, z, p);
+      const a = Math.sin(Math.PI * p);
+      for (let k = 3; k >= 1; k--) {                 // kısa iz
+        const pp = gidis ? p - k * 0.012 : p + k * 0.012;
+        if (pp < 0 || pp > 1) continue;
+        const Q = bez(g, c, z, pp);
+        glowDot(Q.x, Q.y, (2.2 - k * 0.4) * sceneScale, "255,214,110", a * 0.35);
+      }
+      glowDot(P.x, P.y, (gidis ? 3.6 : 2.8) * sceneScale, gidis ? "255,226,130" : "180,255,160", a);
+    }
+    // varış noktasında küçük nabız
+    const nab = (t * 1.2 + tohum) % 1;
+    ctx.strokeStyle = `rgba(255,214,110,${(1 - nab) * 0.5})`;
+    ctx.lineWidth = 1.2 * sceneScale;
+    ctx.beginPath(); ctx.ellipse(z.x, z.y, (6 + nab * 22) * sceneScale, (3 + nab * 9) * sceneScale, 0, 0, 6.284); ctx.stroke();
+  }
+
+  const ONLEMFX = {
+    yeni(t, z, id) { enerjiAkisi(t, zoneScr.gunes, z, id); },
+    akil(t, z, id) {
+      if (id === "port") {
+        // lojistik takip: saha ışıkları sırayla yanıp söner, bir "tarama" dolaşır
+        const tara = Math.floor(t * 6) % FXN.limanSaha.length;
+        FXN.limanSaha.forEach(([sx, sy], i) => {
+          const P = ekr(sx, sy);
+          const yan = Math.sin(t * 4.2 + i * 1.9) > 0.35 || i === tara;
+          if (yan) glowDot(P.x, P.y, (i === tara ? 2.8 : 2) * sceneScale,
+                           i === tara ? "160,255,210" : "110,220,255", i === tara ? 1 : 0.8);
+        });
+        return;
+      }
+      // akıllı enerji yönetimi: tesis üstünde atan küçük bir ağ
+      for (const [ox, oy, s] of ptsFor("akil-" + id, 6, 377)) {
+        const P = { x: z.x + ox * z.rx * 0.55, y: z.y + oy * z.ry * 0.45 };
+        glowDot(P.x, P.y, 1.6 * sceneScale, "120,240,220", 0.35 + 0.55 * Math.max(0, Math.sin(t * 3 + s * 6.28)));
+      }
+    },
+    led(t, z, id) {
+      if (id !== "hava") return;
+      // terminal binası aydınlanır
+      const [x0, y0, x1, y1] = FXN.terminal;
+      const A = ekr(x0, y0), B = ekr(x1, y1);
+      const g = ctx.createRadialGradient((A.x + B.x) / 2, (A.y + B.y) / 2, 0, (A.x + B.x) / 2, (A.y + B.y) / 2, (B.x - A.x) * 0.75);
+      g.addColorStop(0, "rgba(255,236,190,0.30)"); g.addColorStop(1, "rgba(255,236,190,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(A.x - (B.x - A.x) * 0.3, A.y - (B.y - A.y) * 2.5, (B.x - A.x) * 1.6, (B.y - A.y) * 5);
+      for (let x = x0 + 6; x < x1 - 4; x += 6) {         // pencere sırası
+        const P = ekr(x, y0 + (y1 - y0) * 0.55);
+        glowDot(P.x, P.y, 1.1 * sceneScale, "255,246,220", 0.75 + 0.2 * Math.sin(t * 2 + x));
+      }
+      const K = ekr(...FXN.kule);
+      glowDot(K.x, K.y, 2.2 * sceneScale, "255,250,235", 0.7 + 0.3 * Math.sin(t * 3));
+      // pist kenar ışıkları: LED ile parlak ve düzenli
+      for (let k = 0; k <= 12; k++) {
+        const u = k / 12;
+        for (let s = 0; s < 2; s++) {
+          const a = FXN.pistYakin[s], b = FXN.pistUzak[s];
+          const P = ekr(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u);
+          const dalga = Math.max(0, Math.sin(t * 5 - u * 9));
+          glowDot(P.x, P.y, (1.4 - u * 0.5) * sceneScale, "220,240,255", 0.45 + dalga * 0.5);
+        }
+      }
+    },
+    elek(t, z, id) {
+      // elektrikli araçlar: mavi ışıklar sahada dolaşır
+      const yol = id === "port" ? FXN.limanSaha.map(([x, y]) => ekr(x, y)) : null;
+      for (let i = 0; i < 5; i++) {
+        let P;
+        if (yol) {
+          const p = (t * 0.22 + i / 5) % 1, n = yol.length;
+          const f = p * n, a = yol[Math.floor(f) % n], b = yol[(Math.floor(f) + 1) % n], u = f % 1;
+          P = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
+        } else {
+          const an = t * 0.5 + i * 1.257;
+          P = { x: z.x + Math.cos(an) * z.rx * 0.45, y: z.y + Math.sin(an) * z.ry * 0.35 };
+        }
+        glowDot(P.x, P.y, 1.9 * sceneScale, "110,200,255", 0.9);
+        if (Math.sin(t * 7 + i * 2) > 0.92) glowDot(P.x, P.y - 3 * sceneScale, 1.1 * sceneScale, "220,245,255", 1);
+      }
+    },
+    sarj(t, z, id) {
+      for (const [ox, , s] of ptsFor("sarj-" + id, 3, 515)) {
+        const P = { x: z.x + ox * z.rx * 0.6, y: z.y + (s - 0.5) * z.ry * 0.5 };
+        const p = (t / 1.6 + s) % 1;
+        glowDot(P.x, P.y, 2 * sceneScale, "120,255,160", 0.9);
+        ctx.strokeStyle = `rgba(120,255,160,${(1 - p) * 0.7})`;
+        ctx.lineWidth = 1.3 * sceneScale;
+        ctx.beginPath(); ctx.ellipse(P.x, P.y, (3 + p * 14) * sceneScale, (1.5 + p * 6) * sceneScale, 0, 0, 6.284); ctx.stroke();
+      }
+    },
+    iklim(t, z) {
+      // koruma kubbesi: yapının üstünde ince bir yay, üzerinde dolaşan parıltı
+      ctx.strokeStyle = "rgba(140,220,255,0.22)";
+      ctx.lineWidth = 1.5 * sceneScale;
+      ctx.beginPath(); ctx.ellipse(z.x, z.y, z.rx * 0.75, z.ry * 1.25, 0, Math.PI, 2 * Math.PI); ctx.stroke();
+      const an = Math.PI + ((t * 0.35) % 1) * Math.PI;
+      glowDot(z.x + Math.cos(an) * z.rx * 0.75, z.y + Math.sin(an) * z.ry * 1.25, 2.2 * sceneScale, "170,235,255", 0.85);
+    },
+    su(t, z, id) { ONLEMFX.yagmur(t, z, id); },
+    yagmur(t, z, id) {
+      for (const [ox, , s] of ptsFor("yagmur-" + id, 7, 828)) {
+        const p = (t * 0.7 + s) % 1;
+        const x = z.x + ox * z.rx * 0.6, y = z.y - z.ry * 0.9 + p * z.ry * 0.9;
+        glowDot(x, y, 1.3 * sceneScale, "140,210,255", Math.sin(Math.PI * p) * 0.85);
+      }
+    },
+    atik(t, z, id) {
+      // geri kazanım döngüsü: üç zerre küçük bir halkada döner
+      const r = Math.min(z.rx, z.ry * 2) * 0.28;
+      for (let i = 0; i < 3; i++) {
+        const an = t * 1.6 + i * 2.094;
+        glowDot(z.x + Math.cos(an) * r, z.y + Math.sin(an) * r * 0.45, 2 * sceneScale, "150,240,140", 0.9);
+      }
+    },
+    tedarik(t, z, id) {
+      for (let i = 0; i < 4; i++) {
+        const an = i * 1.571 + 0.6, p = (t * 0.4 + i * 0.25) % 1;
+        const R = 1.6 - p * 1.2;
+        glowDot(z.x + Math.cos(an) * z.rx * R, z.y + Math.sin(an) * z.ry * R * 0.8,
+                1.7 * sceneScale, "180,255,170", Math.sin(Math.PI * p) * 0.85);
+      }
+    },
+    yakit(t, z) {
+      const F = { x: z.x - z.rx * 0.2, y: z.y - z.ry * 0.05 };
+      for (let i = 0; i < 5; i++) {
+        const a = 0.4 + 0.6 * Math.abs(Math.sin(t * 9 + i * 1.3));
+        glowDot(F.x + (i - 2) * 3 * sceneScale, F.y - a * 4 * sceneScale, 1.5 * sceneScale, "120,255,170", a * 0.8);
+      }
+    },
+    ccus(t, z) {
+      // bacadan yükselen karbon zerreleri kıvrılıp yakalama noktasına iner
+      const B = { x: z.x + z.rx * 0.15, y: z.y - z.ry * 0.45 };
+      const Y = { x: z.x + z.rx * 0.55, y: z.y + z.ry * 0.1 };
+      const C = { x: (B.x + Y.x) / 2, y: B.y - 70 * sceneScale };
+      for (let i = 0; i < 6; i++) {
+        const p = (t * 0.35 + i / 6) % 1;
+        const P = bez(B, C, Y, p);
+        glowDot(P.x, P.y, 1.7 * sceneScale, p < 0.5 ? "220,220,220" : "120,240,190", Math.sin(Math.PI * p) * 0.8);
+      }
+      const nab = 0.5 + 0.5 * Math.sin(t * 3);
+      ctx.strokeStyle = `rgba(120,240,190,${0.35 + nab * 0.4})`;
+      ctx.lineWidth = 1.4 * sceneScale;
+      ctx.beginPath(); ctx.ellipse(Y.x, Y.y, 6 * sceneScale, 3 * sceneScale, 0, 0, 6.284); ctx.stroke();
+    },
+  };
+
+  function drawOnlemFx(t) {
+    for (const k of uygulanan) {
+      const [id, oid] = k.split(":");
+      const z = zoneScr[id], f = ONLEMFX[oid];
+      if (z && f) f(t, z, id);
+    }
+  }
+
+  /* KALAN ETKİ PUSU — 2. aşamada her yatırımın üstünde, kalan etkisiyle
+     orantılı yumuşak bir pus. Önlem alındıkça o yatırımın üstü açılır;
+     "değişiklik belirgin olsun" talebinin en okunur karşılığı.
+     DOM katmanı + yalnız opaklık geçişi: ekran kartında çizilir. */
+  const pusOf = {};
+  const pusKap = document.createElement("div");
+  pusKap.className = "puslar";
+  pusKap.setAttribute("aria-hidden", "true");
+  scene.after(pusKap);
+  function pusKur() {
+    pusKap.replaceChildren();
+    for (const id of Object.keys(pusOf)) delete pusOf[id];
+    for (const leaf of LEAVES) {
+      if (!placed.has(leaf.id) || !onlemleri(leaf.id).length || !zoneScr[leaf.id]) continue;
+      const d = document.createElement("span");
+      d.className = "pus";
+      pusKap.appendChild(d);
+      pusOf[leaf.id] = d;
+    }
+    pusYerlestir();
+  }
+  function pusYerlestir() {
+    for (const [id, d] of Object.entries(pusOf)) {
+      const z = zoneScr[id];
+      if (!z) continue;
+      d.style.left = (z.x - z.rx * 1.25).toFixed(0) + "px";
+      d.style.top = (z.y - z.ry * 1.9).toFixed(0) + "px";
+      d.style.width = (z.rx * 2.5).toFixed(0) + "px";
+      d.style.height = (z.ry * 3.1).toFixed(0) + "px";
+    }
+  }
+  function pusTazele() {
+    for (const [id, d] of Object.entries(pusOf))
+      d.style.opacity = asama === 2 ? (kalanEtki(id) / 100).toFixed(3) : "0";
+  }
+
+  /* ============================================================
+     UÇAK — havalimanında belirli aralıklarla kalkış ve iniş (02.10)
+     "kesinlikle profesyonel, sırıtmadan". Uçak gerçek fotoğraf
+     dokusunda (assets/img/scene/ucak.png) ve pist DÜZLEMİNDE çizilir:
+     pistin dört köşesi sahnede ölçüldü, pist yerel koordinatından
+     (u: boy, v: en, metre) sahne pikseline bir homografi kuruldu
+     (tools/rev2/pist.py). Uçak her an o noktadaki yerel perspektifle
+     (homografinin türevi) eğilir; uzaklaştıkça küçülür, yerden
+     kalkınca gölgesi yerde kalır.
+     ============================================================ */
+  const PIST_H = [1.744416147, 1.130817446, 624.453334092,
+                  0.497032568, -0.131635088, 502.5,
+                  0.0020237, -0.00026196, 1.0];     // L = 600 m, en 45 m
+  const PIST_L = 600;
+  const pistNokta = (u, v) => {
+    const h = PIST_H, w = h[6] * u + h[7] * v + h[8];
+    return [(h[0] * u + h[1] * v + h[2]) / w, (h[3] * u + h[4] * v + h[5]) / w];
+  };
+  const ucakImg = new Image(), golgeImg = new Image();
+  ucakImg.src = `assets/img/scene/ucak.png?v=${AV}`;
+  golgeImg.src = `assets/img/scene/ucak-golge.png?v=${AV}`;
+  let havaT0 = 0;                                  // havalimanının kurulduğu an
+  const UCAK_DONGU = 50;                           // saniye
+  const yumusak = (x) => x * x * (3 - 2 * x);
+
+  /* Döngü içindeki konum: { u, z (metre), ileri, a (opaklık) } ya da null */
+  function ucakDurum(s) {
+    // KALKIŞ (0-16 sn): eşikte belir → hızlan → 380 m'de kalk → ufka tırman
+    if (s < 16) {
+      const a = Math.min(1, s / 0.8);
+      let u;
+      if (s < 2) u = 40;
+      else if (s < 10) u = 40 + Math.pow((s - 2) / 8, 2) * 520;
+      else u = 560 + 130 * (s - 10);
+      // gerçekçi tırmanış: ~%12 eğimle başlar, yavaşça dikleşir; uçak
+      // dağ sırtının üstüne çıkmadan vadinin derinliğinde kaybolur
+      const k = Math.max(0, u - 380);
+      const z = 0.12 * k + 0.0002 * k * k;
+      const sonu = Math.max(0, Math.min(1, (u - 850) / 260));
+      return { u, z, ileri: true, a: a * (1 - sonu) };
+    }
+    // İNİŞ (24-43 sn): ufuktan alçal → uzak eşiğe değ → izleyiciye doğru yavaşla
+    if (s >= 24 && s < 43) {
+      const t = s - 24;
+      const tYak = 7.8;                               // yaklaşma süresi
+      if (t < tYak) {
+        const u = 1300 - 100 * t;                     // ~7° süzülüş
+        return { u, z: (u - 520) * 0.12, ileri: false, a: Math.min(1, t / 1.5) };
+      }
+      const T = t - tYak, ivme = 11.9, dur = 100 / ivme;
+      const TT = Math.min(T, dur);
+      const u = 520 - (100 * TT - 0.5 * ivme * TT * TT);
+      const a = T > dur ? Math.max(0, 1 - (T - dur) / 1.2) : 1;
+      return a > 0 ? { u, z: 0, ileri: false, a } : null;
+    }
+    return null;
+  }
+
+  function ucakCiz(tSec) {
+    if (!placed.has("hava") || reduce || !ucakImg.complete || !ucakImg.naturalWidth) return;
+    const s = (tSec - havaT0) % UCAK_DONGU;
+    const d = ucakDurum(s);
+    if (!d || d.a <= 0.01) return;
+    const e = 0.5;
+    const [px, py] = pistNokta(d.u, 0);
+    const [ax1, ay1] = pistNokta(d.u + e, 0), [ax0, ay0] = pistNokta(d.u - e, 0);
+    const [bx1, by1] = pistNokta(d.u, e), [bx0, by0] = pistNokta(d.u, -e);
+    // sahne pikseli/metre: boy (a) ve en (b) yönünde; ekrana sceneScale ile
+    const a = [(ax1 - ax0) / (2 * e) * sceneScale, (ay1 - ay0) / (2 * e) * sceneScale];
+    const b = [(bx1 - bx0) / (2 * e) * sceneScale, (by1 - by0) / (2 * e) * sceneScale];
+    const P = ekr(px, py);
+    // 1,3 ×: dar bölgesel pistte gövde okunur kalsın (geniş gövdeli uçak oranı)
+    const k = 1.3 * 37.6 / ucakImg.naturalHeight;   // metre / görsel pikseli
+    const yon = d.ileri ? 1 : -1;
+    const bLen = Math.hypot(b[0], b[1]);
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    // gölge: yerde kalır, yükseldikçe kayar ve solar (güneş batıdan)
+    if (golgeImg.complete && golgeImg.naturalWidth) {
+      ctx.save();
+      ctx.globalAlpha = d.a * Math.max(0, 1 - d.z / 180) * 0.85;
+      ctx.transform(b[0] * k * yon, b[1] * k * yon, -a[0] * k * yon, -a[1] * k * yon,
+                    P.x + d.z * 0.5 * bLen, P.y + d.z * 0.12 * bLen);
+      ctx.drawImage(golgeImg, -golgeImg.naturalWidth / 2, -golgeImg.naturalHeight / 2);
+      ctx.restore();
+    }
+    ctx.globalAlpha = d.a;
+    ctx.transform(b[0] * k * yon, b[1] * k * yon, -a[0] * k * yon, -a[1] * k * yon,
+                  P.x, P.y - d.z * bLen * 0.9);
+    ctx.drawImage(ucakImg, -ucakImg.naturalWidth / 2, -ucakImg.naturalHeight / 2);
+    ctx.restore();
+    // çakar ışık: yalnız havadayken, kısa beyaz bir parlama (gerçek uçak
+    // gibi). Renkli kanat ışıkları bu ölçekte "oyuncak" gibi duruyordu.
+    if (d.z > 4 && d.a > 0.3 && (tSec * 1.1) % 1 < 0.06)
+      glowDot(P.x, P.y - d.z * bLen * 0.9, 0.9 * sceneScale, "255,255,255", d.a * 0.8);
+  }
+
+  /* önlem paneli açıkken ilgili yatırım sahnede kesikli bir halkayla
+     işaretlenir — panel nereye kayarsa kaysın hangi yapıyla ilgili belli */
+  function isaretle(z, s, t) {
+    const rgb = rgbOf(s.color);
+    const nab = 0.5 + 0.5 * Math.sin(t * 3.2);
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = `rgba(${rgb},${0.55 + nab * 0.35})`;
+    ctx.lineWidth = 2 * sceneScale;
+    ctx.setLineDash([10 * sceneScale, 7 * sceneScale]);
+    ctx.lineDashOffset = -t * 30;
+    ctx.beginPath();
+    ctx.ellipse(z.x, z.y, z.rx * (0.9 + nab * 0.04), z.ry * (0.9 + nab * 0.04), 0, 0, 6.284);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawFX() {
     ctx.clearRect(0, 0, FXW, FXH);
     ctx.globalCompositeOperation = "lighter";
@@ -476,7 +827,10 @@
       const z = zoneScr[id], f = AMBFX[id];
       if (z && f) f(tSec, z);
     }
+    ucakCiz(tSec);
     if (rotalar.length) drawRotalar(tSec * 1000);
+    if (acikFix && zoneScr[acikFix]) isaretle(zoneScr[acikFix], LEAF[acikFix], tSec);
+    if (asama === 2) drawOnlemFx(tSec);
     for (const m of motes) {
       m.x += m.vx; m.y += m.vy;
       if (m.y < -10) { m.y = FXH + 10; m.x = Math.random() * FXW; }
@@ -526,19 +880,28 @@
 
   /* Bir yaprak yerleşebilir mi? Dalın `needs` koşulu sağlanmalı.
      "Çimento olmadan şehir olmaz" — İnşaat dalı çimentoya bağlı. */
-  function engel(leaf) {
+  function engel(leaf, kume = placed) {
     const dal = leaf.parent ? SECTORS.find((s) => s.id === leaf.parent) : null;
     // Dalın koşulu (İnşaat → çimento) önce, yaprağın kendi koşulu
-    // (Köprü → otoyol) sonra denetlenir; ikisi de sağlanmalı.
+    // (Köprü → otoyol, Konut → gıda, Çimento → enerji) sonra; hepsi sağlanmalı.
     for (const kaynak of [dal, leaf]) {
-      const ihtiyac = kaynak && kaynak.needs;
-      if (ihtiyac && !placed.has(ihtiyac)) {
-        const n = LEAF[ihtiyac];
+      if (kaynak && !ihtiyacVar(kaynak.needs, kume)) {
         uyarNeden = kaynak.needsWhy || "";
-        return `Önce ${n ? n.name : ihtiyac} yerleşmeli`;
+        return `Önce ${ihtiyacAdi(kaynak)} yerleşmeli`;
       }
     }
     return null;
+  }
+  /* `needs` tek kimlik ya da dizi olabilir; dizi "bunlardan biri yeter"
+     demektir (çimento için herhangi bir enerji santrali). */
+  function ihtiyacVar(needs, kume = placed) {
+    if (!needs) return true;
+    return Array.isArray(needs) ? needs.some((id) => kume.has(id)) : kume.has(needs);
+  }
+  function ihtiyacAdi(kaynak) {
+    if (kaynak.needsName) return kaynak.needsName;
+    const n = LEAF[kaynak.needs];
+    return n ? n.name : String(kaynak.needs);
   }
   let uyarNeden = "";
 
@@ -551,11 +914,17 @@
     b.setAttribute("aria-label", `${leaf.name} — merkeze sürükle`);
     b.innerHTML = `${ikon(leaf.icon)}
       <span class="chip__name">${leaf.name}</span>
-      <span class="chip__sub">${leaf.sub}</span>${tik}
+      <span class="chip__sub">${leaf.sub}</span>
+      <span class="chip__geri" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        geri al</span>${tik}
       <span class="chip__lock" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg></span>`;
     b.addEventListener("pointerdown", (e) => {
+      // 02.10: kurulmuş yatırıma dokunmak onu kaldırır (bağlı olanlarla birlikte)
+      if (placed.has(leaf.id)) { e.preventDefault(); kaldirKullanici(leaf.id); return; }
       const n = engel(leaf);
       if (n) { e.preventDefault(); uyar(n, leaf); return; }
       startDrag(e, leaf, b);
@@ -563,6 +932,7 @@
     b.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        if (placed.has(leaf.id)) { kaldirKullanici(leaf.id); return; }
         const n = engel(leaf);
         n ? uyar(n, leaf) : commit(leaf);
       }
@@ -672,8 +1042,10 @@
       const n = kondu ? null : engel(leaf);
       c.classList.toggle("is-placed", kondu);
       c.classList.toggle("is-locked", !!n);
-      c.disabled = kondu;
-      if (n) c.title = n; else c.removeAttribute("title");
+      // kurulmuş çip artık devre dışı değil: dokununca geri alınır
+      c.disabled = false;
+      c.setAttribute("aria-label", kondu ? `${leaf.name} — kaldırmak için dokun` : `${leaf.name} — bölgesine sürükle`);
+      if (n) c.title = n; else if (kondu) c.title = "Geri almak için dokun"; else c.removeAttribute("title");
     }
     SECTORS.filter((s) => s.children).forEach((s) => {
       const b = trayRail.querySelector(`.chip--branch[data-branch="${s.id}"]`);
@@ -681,23 +1053,23 @@
       const n = s.children.filter((c) => placed.has(c.id)).length;
       b.querySelector(".chip__done").textContent = n;
       b.classList.toggle("is-placed", n === s.children.length);
-      const kilit = s.needs && !placed.has(s.needs);
-      b.classList.toggle("is-locked", !!kilit);
-      if (kilit) {
-        const d = LEAF[s.needs];
-        b.title = `Önce ${d ? d.name : s.needs} yerleşmeli`;
-      } else b.removeAttribute("title");
+      const kilit = !ihtiyacVar(s.needs);
+      b.classList.toggle("is-locked", kilit);
+      if (kilit) b.title = `Önce ${ihtiyacAdi(s)} yerleşmeli`;
+      else b.removeAttribute("title");
     });
   }
 
-  /* Kapı uyarısı — sahnenin ortasında, kısa ve net */
+  /* Kapı uyarısı — sahnenin ortasında, kısa ve net.
+     `geri` verilirse aynı kutu kaldırma bildirimi olarak kullanılır. */
   let uyarT = 0;
-  function uyar(metin, leaf) {
+  function uyar(metin, leaf, geri = null) {
     const el = $("gatewarn");
     if (!el) return;
     el.style.setProperty("--c", (leaf && leaf.color) || "var(--sprout)");
+    el.classList.toggle("is-geri", geri != null);
     $("gatewarnTxt").textContent = metin;
-    $("gatewarnWhy").textContent = uyarNeden || "Çimento olmadan şehir kurulamaz.";
+    $("gatewarnWhy").textContent = geri != null ? geri : (uyarNeden || "Çimento olmadan şehir kurulamaz.");
     el.hidden = false;
     requestAnimationFrame(() => el.classList.add("is-show"));
     clearTimeout(uyarT);
@@ -841,6 +1213,7 @@
       w: r.width, h: r.height, home: { x: r.left, y: r.top }, near: false };
 
     $("intro")?.classList.add("is-done");
+    document.body.classList.add("is-suruk");     // alt menü hedefi örtmesin (02.10)
     hedefiTasi(sector.id);                       // halka yatırımın yerine gitsin
     core.style.setProperty("--c", sector.color);
     core.classList.add("is-dragging", "is-armed");
@@ -900,6 +1273,7 @@
     const c = drag.clone.getBoundingClientRect();
     const d = drag;
     drag = null;
+    document.body.classList.remove("is-suruk");
     /* bırakma kararı yatırımın kendi bölgesine göre; cömert bir pay bırakılır
        ki dokunmatik ekranda kimse zorlanmasın */
     const ok = hedefUzaklik(d.sector.id, c.left + c.width / 2, c.top + c.height / 2) < 1.15;
@@ -975,7 +1349,7 @@
     3: "Temel atıldı",
     6: "Bölge şekilleniyor",
     9: "Ekosistem birbirine bağlanıyor",
-    12: "Son adım kaldı",
+    11: "Son adım kaldı",            // 02.10: AVM kalktı, 12 yatırım
   };
   function showMilestone(n) {
     const txt = MILESTONES[n];
@@ -988,15 +1362,65 @@
     msT = setTimeout(() => el.classList.remove("is-show"), 3600);
   }
 
-  /* bilgi çipi: bölgenin üstünde gerçek Limak verisi */
+  /* ============================================================
+     KUTU YERLEŞİMİ (02.10) — "tıklayınca çıkan yazılar ilgili projeyi
+     kapatmamalı". Kutu için aday konumlar puanlanır: ilgili yatırımın
+     üstüne binmek çok ağır, diğer kurulu yatırımların üstüne binmek
+     hafif cezalanır; üst şerit ve alt tepsi bölgesine taşmaz.
+     ============================================================ */
+  const kutuAlani = (z, k = 0.82) => ({ x0: z.x - z.rx * k, x1: z.x + z.rx * k, y0: z.y - z.ry * k, y1: z.y + z.ry * k });
+  function ortusme(x, y, w, h, b) {           // b alanının yüzde kaçı örtülüyor
+    const ox = Math.max(0, Math.min(x + w, b.x1) - Math.max(x, b.x0));
+    const oy = Math.max(0, Math.min(y + h, b.y1) - Math.max(y, b.y0));
+    return (ox * oy) / Math.max(1, (b.x1 - b.x0) * (b.y1 - b.y0));
+  }
+  function uiSinir() {
+    const tr = tray.getBoundingClientRect();
+    const st = $("subtray");
+    const stTop = st && !st.hidden ? st.getBoundingClientRect().top : Infinity;
+    return { ust: 96, alt: Math.min(tr.top, stTop) - 12 };
+  }
+  function kutuPuani(x, y, w, h, z, sahip) {
+    let s = ortusme(x, y, w, h, kutuAlani(z)) * 60;
+    for (const id of placed) {
+      const o = zoneScr[id];
+      if (o && id !== sahip) s += ortusme(x, y, w, h, kutuAlani(o, 0.7)) * 5;
+    }
+    return s;
+  }
+  function kutuYeri(w, h, z, sahip, pay = 16) {
+    const { ust, alt } = uiSinir(), kenar = 16;
+    const ex = z.rx * 0.86, ey = z.ry * 0.86;
+    const adaylar = [
+      [z.x - w / 2, z.y - ey - pay - h, 0],          // üst (tercih)
+      [z.x + ex + pay, z.y - h / 2, 0.15],           // sağ
+      [z.x - ex - pay - w, z.y - h / 2, 0.15],       // sol
+      [z.x - w / 2, z.y + ey + pay, 0.3],            // alt
+    ];
+    let en = null;
+    for (const [ax, ay, tercih] of adaylar) {
+      const x = Math.min(Math.max(ax, kenar), innerWidth - w - kenar);
+      const y = Math.min(Math.max(ay, ust), Math.max(ust, alt - h));
+      const s = kutuPuani(x, y, w, h, z, sahip) + tercih
+              + (Math.abs(x - ax) + Math.abs(y - ay)) * 0.0015;
+      if (!en || s < en.s) en = { x, y, s };
+    }
+    return en;
+  }
+
+  /* bilgi çipi: bölgenin yanında gerçek Limak verisi — yatırımı örtmez */
   function showFact(sector, z) {
     const chip = $("factchip");
     if (!sector.fact || !z) return;
+    factSahibi = sector.id;
     chip.style.setProperty("--fc", sector.color);
     $("factEye").textContent = `${sector.name} · Limak`;
     $("factTxt").textContent = sector.fact;
-    chip.style.left = Math.min(Math.max(z.x, 240), FXW - 240) + "px";
-    chip.style.top = Math.max(z.y - z.ry * 0.75, 96) + "px";
+    chip.style.translate = "0 0";
+    const w = chip.offsetWidth || 380, h = chip.offsetHeight || 96;
+    const yer = kutuYeri(w, h, z, sector.id);
+    chip.style.left = yer.x.toFixed(0) + "px";
+    chip.style.top = yer.y.toFixed(0) + "px";
     chip.classList.remove("is-show");
     clearTimeout(factT); clearTimeout(factT2);
     factT2 = setTimeout(() => chip.classList.add("is-show"), 500);
@@ -1028,9 +1452,100 @@
     if (s) { showFact(s, zoneScr[id]); Snd.lift(); }
   });
 
-  function commit(sector) {
+  /* ============================================================
+     GERİ ALMA (02.10 revizyonu)
+     · "Geri al" düğmesi son adımı geri alır (kurulum ve etki azaltma)
+     · kurulmuş yatırımın tepsideki düğmesine dokunmak onu kaldırır
+     · kaldırılan yatırıma BAĞLI olanlar da düşer (çimento giderse inşaat)
+     Geçmiş kaydı: { tip: "kur"|"kaldir"|"onlem"|"onlemGeri", ... }
+     ============================================================ */
+  const gecmis = [];
+  const undoBtn = $("undoBtn");
+  const tazeleUndo = () => { if (undoBtn) undoBtn.hidden = gecmis.length === 0; };
+  const adlar = (ids) => ids.map((id) => (LEAF[id] ? LEAF[id].name : id)).join(", ");
+
+  /* `ids` kaldırılırsa koşulu bozulacak diğer kurulu yatırımlar,
+     keşif sırasıyla (önce doğrudan bağlılar) */
+  function bagimlilar(ids) {
+    const kalan = new Set(placed);
+    ids.forEach((id) => kalan.delete(id));
+    const dusen = [];
+    let degisti = true;
+    while (degisti) {
+      degisti = false;
+      for (const leaf of LEAVES) {
+        if (kalan.has(leaf.id) && engel(leaf, kalan)) {
+          kalan.delete(leaf.id); dusen.push(leaf.id); degisti = true;
+        }
+      }
+    }
+    return dusen;
+  }
+
+  /* tek yatırımı sahneden indir — kayıt tutmaz, toplu işlemin parçası */
+  function kaldirTek(id) {
+    if (!placed.has(id)) return;
+    placed.delete(id);
+    const L = layerOf[id];
+    if (L) { L.classList.remove("is-on", "is-ghost"); L.style.removeProperty("--ghost"); }
+    healOf[id]?.classList.remove("is-on");
+    // yerleşirken eklenen zerreler de çekilir — dünya küçülünce hava da sakinleşir
+    motes.splice(0, Math.min(motes.length, Math.round(10 + (placed.size / LEAVES.length) * 22)));
+    if (!reduce && zoneScr[id]) ring("255,196,160", 0.7, 0.5, zoneScr[id]);
+  }
+
+  /* toplu kaldırma: sonrası tek seferde tazelenir */
+  function kaldirToplu(ids) {
+    ids.slice().reverse().forEach(kaldirTek);   // önce bağlılar, sonra kendisi
+    if (ids.length) Snd.back();
+    if (factSahibi && ids.includes(factSahibi)) $("factchip").classList.remove("is-show");
+    tazeleOkumalar();
+    tazeleCipler();
+    updateProgress();
+  }
+
+  /* kullanıcı kurulu bir yatırımın düğmesine dokundu */
+  function kaldirKullanici(id) {
+    if (asama !== 1 || !placed.has(id)) return;
+    lastInput = performance.now();
+    const ids = [id, ...bagimlilar([id])];
+    kaldirToplu(ids);
+    gecmis.push({ tip: "kaldir", ids });
+    tazeleUndo();
+    const s = LEAF[id];
+    uyar(`${s.name} kaldırıldı`, s,
+      ids.length > 1 ? `Bağlı oldukları için ${adlar(ids.slice(1))} da kaldırıldı.`
+                     : "Geri getirmek için “Geri al”a dokunun.");
+  }
+
+  /* son adımı geri al */
+  function geriAl() {
+    const k = gecmis.pop();
+    tazeleUndo();
+    if (!k) return;
+    lastInput = performance.now();
+    if (k.tip === "kur") {
+      const ids = [...k.ids, ...bagimlilar(k.ids)];
+      kaldirToplu(ids);
+    } else if (k.tip === "kaldir") {
+      // önkoşullar önce: kaldırma sırasının tersi
+      k.ids.forEach((id) => LEAF[id] && commit(LEAF[id], { kayit: false, sessiz: true }));
+    } else if (k.tip === "onlem") {
+      onlemGeri(k.id, k.oid, { kayit: false });
+    } else if (k.tip === "onlemGeri") {
+      const o = onlemleri(k.id).find((x) => x.id === k.oid);
+      if (o) onlemUygula(k.id, o, null, { kayit: false });
+    }
+  }
+  undoBtn?.addEventListener("click", geriAl);
+
+  let factSahibi = null;
+
+  function commit(sector, { kayit = true, sessiz = false } = {}) {
     if (placed.has(sector.id)) return;
     placed.add(sector.id);
+    if (kayit) { gecmis.push({ tip: "kur", ids: [sector.id] }); tazeleUndo(); }
+    if (sector.id === "hava") havaT0 = performance.now() / 1000 + 3;
     Snd.drop();
     $("intro")?.classList.add("is-done");
 
@@ -1044,17 +1559,21 @@
     /* bölgesel iyileşme: bu yatırım KENDİ bölgesini anında yeşertir */
     healOf[sector.id]?.classList.add("is-on");
 
-    /* kamera dalışı: sahne kısa süre bölgeye yaklaşır, sonra geri açılır */
+    /* kamera dalışı: sahne kısa süre bölgeye yaklaşır, sonra geri açılır.
+       Geri alma ile geri getirilen yatırımda dalış ve künye yok (sessiz). */
     const z = zoneScr[sector.id];
-    if (z && !reduce) {
+    if (z && !reduce && !sessiz) {
       scene.style.transformOrigin = `${z.px}% ${z.py}%`;
       scene.classList.add("is-punch");
       clearTimeout(punchT);
       punchT = setTimeout(() => scene.classList.remove("is-punch"), 2100);
     }
-    showFact(sector, z);
+    if (!sessiz) showFact(sector, z);
 
-    if (!reduce) {
+    if (!reduce && sessiz) {
+      if (z) ring(rgbOf(sector.color), 0.8, 0.6, z);
+      seedMotes(Math.round(10 + (placed.size / LEAVES.length) * 22));
+    } else if (!reduce) {
       const rgb = rgbOf(sector.color);
       ring("182,255,138", 1.5, 1);
       setTimeout(() => ring(rgb, 1.15, 0.85), 110);
@@ -1069,10 +1588,10 @@
         { duration: 620, easing: "cubic-bezier(.16,1,.3,1)" });
     }
 
-    showMilestone(placed.size);
+    if (!sessiz) showMilestone(placed.size);
 
     const chip = chipOf[sector.id];
-    if (chip) { chip.classList.add("is-placed"); chip.style.visibility = ""; chip.disabled = true; }
+    if (chip) { chip.classList.add("is-placed"); chip.style.visibility = ""; }
     tazeleOkumalar();
     tazeleCipler();
 
@@ -1092,6 +1611,7 @@
     carbonVal.textContent = "−%" + co2;
     carbonBox.classList.toggle("is-good", co2 > 0);
 
+    core.classList.toggle("is-full", n === total);
     if (n === 0) {
       trayHint.textContent = "Bir yatırımı seç, ışıyan bölgesine bırak";
       coreLabel.textContent = "Buraya bırak";
@@ -1099,13 +1619,38 @@
       trayHint.textContent = `${total - n} yatırım daha — dünya ${Math.round(p * 100)}% hazır`;
       coreLabel.textContent = "Buraya bırak";
     } else {
-      trayHint.textContent = "Dünya tamamlandı";
-      core.classList.add("is-full");
-      tray.classList.add("is-empty");
-      // 1. aşama biter; final değil, ETKİ AZALTMA aşaması açılır (26.09 · D)
-      setTimeout(showPhase2, 2200);
+      trayHint.textContent = "Dünya tamamlandı · geri almak için bir yatırıma dokunabilirsin";
     }
+    // 02.10: dünya tamamlanınca ekran kapanmaz; ziyaretçi bakar, hazır
+    // olunca "Devam" ile etki azaltma sayfasına geçer. Tepsi açık kalır
+    // ki son anda da geri alınabilsin.
+    ileriGoster(n === total ? "devam" : null);
   }
+
+  /* İLERİ düğmesi: 1. aşamada "Devam", 2. aşamada "Bitir" */
+  const ileriBtn = $("ileriBtn");
+  let ileriMod = null;
+  function ileriGoster(mod) {
+    if (mod === ileriMod) return;
+    ileriMod = mod;
+    if (!ileriBtn) return;
+    if (!mod) {
+      ileriBtn.classList.remove("is-show");
+      setTimeout(() => { if (!ileriMod) ileriBtn.hidden = true; }, 400);
+      return;
+    }
+    $("ileriEye").textContent = mod === "devam" ? "Dünya tamamlandı" : "Tüm önlemler alındı";
+    $("ileriTxt").textContent = mod === "devam" ? "Devam" : "Bitir";
+    ileriBtn.hidden = false;
+    requestAnimationFrame(() => ileriBtn.classList.add("is-show"));
+    if (mod === "devam") Snd.done();
+  }
+  ileriBtn?.addEventListener("click", () => {
+    const mod = ileriMod;
+    ileriGoster(null);
+    if (mod === "devam") showPhase2();
+    else if (mod === "bitir") showDidYou();
+  });
 
   /* ============================================================
      2. AŞAMA — ETKİ AZALTMA
@@ -1165,10 +1710,19 @@
       <span class="fix__not">${o.not}</span>
       <span class="fix__tik" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="3.4" stroke-linecap="round"
-        stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg></span>`;
-    if (uygulanan.has(anahtar)) { b.classList.add("is-on"); b.disabled = true; }
-    b.addEventListener("click", () => onlemUygula(id, o, b));
+        stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg></span>
+      <span class="fix__geri" aria-hidden="true">geri almak için dokun</span>`;
+    b.dataset.k = anahtar;
+    b.classList.toggle("is-on", uygulanan.has(anahtar));
+    // 02.10: alınmış önleme tekrar dokunmak onu geri alır
+    b.addEventListener("click", () =>
+      uygulanan.has(anahtar) ? onlemGeri(id, o.id) : onlemUygula(id, o, b));
     return b;
+  }
+  /* açık paneldeki kartı durumla eşitle (geri alma paneli kapalıyken de olur) */
+  function tazeleFixKart(anahtar) {
+    const b = document.querySelector(`.fix[data-k="${anahtar}"]`);
+    if (b) b.classList.toggle("is-on", uygulanan.has(anahtar));
   }
 
   function fixAc(id) {
@@ -1189,11 +1743,42 @@
     }
     fixOlcek(id);
     panel.hidden = false;
-    hizala(panel, fixCipOf[id]);
+    fixYerlestir(panel, id);
     requestAnimationFrame(() => { panel.classList.add("is-open"); measure(); });
     trayRail.querySelectorAll(".chip--fix").forEach((c) =>
       c.classList.toggle("is-open", c.dataset.fix === id));
     Snd.lift();
+  }
+
+  /* Önlem paneli (02.10): panel artık ilgili yatırımı örtmez. Adaylar:
+     tepsinin üstü veya üst şeridin altı × çipe hizalı / sol / orta / sağ.
+     Tepside çipe hizalı alt konum tercih edilir; yatırım oradaysa panel
+     yukarı ya da yana kayar. Hizalı değilse ok işareti gizlenir. */
+  function fixYerlestir(panel, id) {
+    const z = zoneScr[id], cip = fixCipOf[id];
+    hizala(panel, cip);                          // ölçü ve varsayılan konum
+    panel.classList.remove("is-ust", "is-oksuz");
+    if (!z) return;
+    const p = panel.getBoundingClientRect();
+    const w = p.width, h = p.height;
+    const { ust, alt } = uiSinir();
+    const c = cip ? cip.getBoundingClientRect() : { left: innerWidth / 2, width: 0 };
+    const merkez = c.left + c.width / 2, kenar = 14;
+    const xHizali = Math.max(kenar, Math.min(merkez - w / 2, innerWidth - w - kenar));
+    const xs = [xHizali, kenar, (innerWidth - w) / 2, innerWidth - w - kenar];
+    const ys = [[alt - h, 0], [ust, 0.35]];             // tepsinin üstü | üst şeridin altı
+    let en = null;
+    for (const [y, tercih] of ys) for (const x of xs) {
+      const s = kutuPuani(x, y, w, h, z, id) + tercih + Math.abs(x - xHizali) * 0.0004;
+      if (!en || s < en.s) en = { x, y, s, ustte: y === ust };
+    }
+    panel.style.left = en.x.toFixed(0) + "px";
+    panel.style.bottom = (innerHeight - en.y - h).toFixed(0) + "px";
+    const okKonum = merkez - en.x;
+    const oklu = !en.ustte && okKonum > 24 && okKonum < w - 24;
+    panel.style.setProperty("--arrow", okKonum.toFixed(0) + "px");
+    panel.classList.toggle("is-ust", en.ustte);
+    panel.classList.toggle("is-oksuz", !oklu);
   }
 
   function fixKapat() {
@@ -1209,7 +1794,7 @@
     if (e.target.closest("#fixpanel, .chip--fix")) return;
     fixKapat();
   }, true);
-  addEventListener("resize", () => { if (acikFix) hizala($("fixpanel"), fixCipOf[acikFix]); });
+  addEventListener("resize", () => { if (acikFix) fixYerlestir($("fixpanel"), acikFix); });
 
   /* panel başlığındaki kalan-etki ölçeri */
   function fixOlcek(id) {
@@ -1218,12 +1803,12 @@
     $("fixNum").textContent = onlemleri(id).length ? "kalan etki %" + k : "—";
   }
 
-  function onlemUygula(id, o, btn) {
+  function onlemUygula(id, o, btn, { kayit = true } = {}) {
     const anahtar = id + ":" + o.id;
     if (uygulanan.has(anahtar)) return;
     uygulanan.add(anahtar);
-    btn.classList.add("is-on");
-    btn.disabled = true;
+    if (kayit) { gecmis.push({ tip: "onlem", id, oid: o.id }); tazeleUndo(); }
+    tazeleFixKart(anahtar);
     Snd.drop();
 
     const s = LEAF[id], z = zoneScr[id];
@@ -1233,7 +1818,34 @@
       if (z) { ring(rgb, 1.2, 0.9, z); burst(26, rgb, z); }
     }
     if (o.bilgi) sonBilgi = { s, o };        // final kartı buradan beslenir
+    pusTazele();
     fixOlcek(id);
+    tazeleFixCipler();
+    tazeleOkumalar();
+    azaltimIlerleme();
+  }
+
+  /* önlemi geri al — etkisi sahneden çekilir, kalan etki geri yükselir */
+  function onlemGeri(id, oid, { kayit = true } = {}) {
+    const anahtar = id + ":" + oid;
+    if (!uygulanan.has(anahtar)) return;
+    uygulanan.delete(anahtar);
+    lastInput = performance.now();
+    if (kayit) { gecmis.push({ tip: "onlemGeri", id, oid }); tazeleUndo(); }
+    tazeleFixKart(anahtar);
+    Snd.back();
+    if (!reduce && zoneScr[id]) ring("255,196,160", 0.8, 0.55, zoneScr[id]);
+    if (sonBilgi && sonBilgi.s.id === id && sonBilgi.o.id === oid) {
+      // final kartı geri alınmış bir karara dayanmasın: kalanların sonuncusu
+      sonBilgi = null;
+      for (const k of uygulanan) {
+        const [i, o] = k.split(":");
+        const ob = onlemleri(i).find((x) => x.id === o);
+        if (ob && ob.bilgi) sonBilgi = { s: LEAF[i], o: ob };
+      }
+    }
+    if (acikFix === id) fixOlcek(id);
+    pusTazele();
     tazeleFixCipler();
     tazeleOkumalar();
     azaltimIlerleme();
@@ -1273,9 +1885,10 @@
       ? "Bir yatırıma dokun, önlemini seç"
       : n < hepsi
         ? `${hepsi - n} önlem daha — kalan etki ortalama %${kalan}`
-        : "Tüm önlemler alındı";
+        : "Tüm önlemler alındı · geri almak için bir önleme dokunabilirsin";
 
-    if (hepsi && n >= hepsi) setTimeout(showDidYou, 1500);
+    // 02.10: tamamlanınca kendiliğinden geçmez; "Bitir" düğmesi çıkar
+    ileriGoster(hepsi && n >= hepsi ? "bitir" : null);
   }
 
   function showPhase2() {
@@ -1287,6 +1900,7 @@
 
   function startPhase2() {
     asama = 2;
+    gecmis.length = 0; tazeleUndo();   // geri alma artık önlemler için
     const P = $("phase2");
     P.classList.remove("is-show");
     setTimeout(() => (P.hidden = true), 520);
@@ -1301,6 +1915,8 @@
     tazeleOkumalar();
     azaltimIlerleme();
     measure();
+    pusKur();
+    setTimeout(pusTazele, 700);        // her yatırımın izi yavaşça belirir
   }
   $("phase2Btn")?.addEventListener("click", startPhase2);
 
@@ -1356,6 +1972,10 @@
 
     /* 2. aşamayı da başa al */
     asama = 1; sonBilgi = null;
+    gecmis.length = 0; tazeleUndo();
+    ileriGoster(null);
+    pusKap.replaceChildren();
+    for (const id of Object.keys(pusOf)) delete pusOf[id];
     uygulanan.clear();
     fixKapat();
     Object.keys(fixCipOf).forEach((k) => delete fixCipOf[k]);
@@ -1379,7 +1999,7 @@
       c.classList.remove("is-placed"); c.disabled = false; c.style.visibility = "";
     });
     tazeleOkumalar();
-    seedMotes(22);
+    // 02.10: uçuşan zerreler yapıldıkça çıkar — ilk ekranda yok
     updateProgress();
   }
 
@@ -1389,6 +2009,9 @@
   document.addEventListener("keydown", (e) => {
     lastInput = performance.now();
     if (e.key === "Escape") { closeSheet(); return; }
+    if (e.key === "Backspace" || (e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey))) {
+      e.preventDefault(); geriAl(); return;
+    }
     if (e.key.toLowerCase() === "r") { reset(); return; }
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= LEAVES.length) { const L = LEAVES[n - 1]; if (!engel(L)) commit(L); }
@@ -1437,7 +2060,7 @@
   buildReadouts();
   tazeleOkumalar();
   measure();
-  seedMotes(24);
+  // 02.10: uçuşan zerreler ilk ekranda yok; her yerleştirmeyle eklenir
   updateProgress();
   addEventListener("resize", measure);
   if (document.fonts?.ready) document.fonts.ready.then(measure);

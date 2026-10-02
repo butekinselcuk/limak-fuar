@@ -156,14 +156,6 @@ window.LIMAK_AZALTIM = {
     ],
   },
 
-  avm: {
-    etki: 100,
-    onlemler: _YASAM.map((x) =>
-      x.id === "yeni"
-        ? { ...x, bilgi: "Ankara Tren Garı ve Yaşam Merkezi 195 bin m²'lik LEED " +
-                         "sertifikalı yapısıyla günde 100 bin kişiyi ağırlıyor." }
-        : { ...x }),
-  },
 
   // Sunumda stadyuma ayrı liste verilmedi; büyük kamu yapısı olarak
   // LIVING SPACE seti uygulandı — müşteri onayı bekliyor.

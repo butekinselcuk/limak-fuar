@@ -23,6 +23,10 @@ window.LIMAK_SECTORS = [
     name: "Çimento",
     sub: "Cement",
     color: "#cdbfa4",
+    // 02.10 revizyonu: "enerji olmadan çimento olamaz" — dizi = biri yeter
+    needs: ["gunes", "hidro", "jeotermal"],
+    needsName: "bir enerji santrali",
+    needsWhy: "Enerji olmadan çimento üretilemez; önce bir santral kurulur.",
     icon: "M4 20h16M6 20V10l6-4 6 4v10M9 20v-5h6v5M3 10l9-6 9 6",
     effect: "Tesis üretime geçti",
     fact: "11 fabrika, 3 ülke, yılda 17,7 milyon ton çimento kapasitesi.",
@@ -85,6 +89,9 @@ window.LIMAK_SECTORS = [
     children: [
       {
         id: "konut", name: "Konut", sub: "Housing", color: "#ff8a3d",
+        // 02.10 revizyonu: bölge beslenmeden yaşam alanı kurulmaz
+        needs: "gida",
+        needsWhy: "Bölge beslenmeden yaşam alanı kurulmaz; önce gıda gelir.",
         icon: "M3 21h18M5 21V10l7-5 7 5v11M10 21v-6h4v6",
         effect: "Yaşam alanı kuruldu",
         fact: "Tuzla'da 70 villalık Villa Flora ve Üsküp'te 323 bin m² karma proje.",
@@ -142,21 +149,6 @@ window.LIMAK_SECTORS = [
           { v: "101 km", l: "Malkara-Çanakkale" },
           { v: "105,2 km", l: "Kınalı-Malkara" },
           { v: "412 km", l: "Kuzey Marmara" },
-        ],
-      },
-      {
-        id: "avm", name: "AVM", sub: "Mall", color: "#ff8a3d",
-        icon: "M3 9h18l-1.5 11H4.5L3 9ZM8 9V6a4 4 0 0 1 8 0v3",
-        effect: "Yaşam merkezi açıldı",
-        fact: "Ankara Tren Garı ve Yaşam Merkezi: 195 bin m², günde 100 bin kişi kapasitesi.",
-        lede:
-          "2016'da açılan Ankara Yüksek Hızlı Tren Garı, Türkiye'de bir ilk olarak tren garını, alışveriş merkezini, oteli ve ofisleri tek çatı altında topluyor. LEED sertifikalı yapı 6 demiryolu hattı, 6 peron ve 2.500 araçlık otoparkıyla dünyanın sekizinci, Avrupa'nın altıncı en büyük ulaşım kompleksi.",
-        note: "Yaşam alanına bitişik kurulur.",
-        stats: [
-          { v: "195.000 m²", l: "Toplam alan" },
-          { v: "25.000 m²", l: "Ticari alan" },
-          { v: "100.000", l: "Günlük kapasite" },
-          { v: "LEED", l: "Sertifika" },
         ],
       },
     ],
@@ -271,6 +263,18 @@ window.LIMAK_FINALE = [
   { v: "200+", l: "Tamamlanan proje" },
   { v: "51.", l: "ENR dünya sırası" },
 ];
+
+/* ---- 02.10 revizyonu: tepsi sırası ----
+   Enerji · Gıda · Çimento · İnşaat · Liman · Havalimanı · Turizm
+   İnşaat alt seçenekleri: Konut · Köprü · Otoyol · Stadyum (AVM kalktı) */
+(() => {
+  const SIRA = ["enerji", "gida", "cimento", "insaat", "port", "hava", "turizm"];
+  const INSAAT = ["konut", "kopru", "otoyol", "stadyum"];
+  const sira = (dizi) => (a, b) => dizi.indexOf(a.id) - dizi.indexOf(b.id);
+  window.LIMAK_SECTORS.sort(sira(SIRA));
+  const ins = window.LIMAK_SECTORS.find((s) => s.id === "insaat");
+  if (ins) ins.children.sort(sira(INSAAT));
+})();
 
 /* ---- yardımcılar: ağaç ↔ yaprak ---- */
 window.LIMAK_LEAVES = window.LIMAK_SECTORS.flatMap((s) =>
