@@ -19,18 +19,22 @@
     p.addEventListener("pointerdown", () => focus(p.dataset.panel));
   });
   dip.addEventListener("pointerleave", () => focus(null));
+  const SIRA = ["world", "time", "harita"];
+  const SAYFA = { world: "world.html", time: "timeline.html", harita: "harita.html" };
   document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") focus("world");
-    if (e.key === "ArrowRight") focus("time");
-    if (e.key === "1") location.href = "world.html";
-    if (e.key === "2") location.href = "timeline.html";
+    const i = SIRA.indexOf(dip.dataset.hover);
+    if (e.key === "ArrowLeft") focus(SIRA[Math.max(0, i - 1)]);
+    if (e.key === "ArrowRight") focus(SIRA[Math.min(SIRA.length - 1, i + 1)]);
+    if (e.key === "1") location.href = SAYFA.world;
+    if (e.key === "2") location.href = SAYFA.time;
+    if (e.key === "3") location.href = SAYFA.harita;
   });
 
   /* Dokunmatik ekranda "hover" yok: sırayla nefes alsın ki
-     ziyaretçi iki tarafın da canlı olduğunu görsün. */
+     ziyaretçi üç tarafın da canlı olduğunu görsün. */
   if (window.matchMedia("(hover: none)").matches) {
     let i = 0;
-    setInterval(() => focus(["world", "time"][i++ % 2]), 4200);
+    setInterval(() => focus(SIRA[i++ % SIRA.length]), 4200);
     focus("world");
   }
 

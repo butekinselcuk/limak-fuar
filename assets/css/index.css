@@ -15,11 +15,12 @@
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   transition: grid-template-columns 0.9s var(--ease-out);
 }
-.diptych[data-hover="world"] { grid-template-columns: 1.32fr 0.68fr; }
-.diptych[data-hover="time"]  { grid-template-columns: 0.68fr 1.32fr; }
+.diptych[data-hover="world"]  { grid-template-columns: 1.5fr 0.75fr 0.75fr; }
+.diptych[data-hover="time"]   { grid-template-columns: 0.75fr 1.5fr 0.75fr; }
+.diptych[data-hover="harita"] { grid-template-columns: 0.75fr 0.75fr 1.5fr; }
 
 /* ---------- panel ---------- */
 .panel {
@@ -45,6 +46,7 @@
 }
 .panel--world { --panel-light: rgba(140, 229, 99, 0.30); }
 .panel--time  { --panel-light: rgba(76, 201, 240, 0.28); }
+.panel--harita { --panel-light: rgba(114, 194, 239, 0.30); }
 .panel.is-hot::after { opacity: 1; }
 
 /* --- sanat alanı --- */
@@ -147,11 +149,12 @@
   position: relative;
   z-index: 3;
   text-shadow: 0 2px 20px rgba(2, 8, 8, 0.85);
-  padding: 0 clamp(28px, 4vw, 76px) clamp(96px, 9vh, 128px);
-  max-width: 44ch;
+  padding: 0 clamp(22px, 2.6vw, 52px) clamp(96px, 9vh, 128px);
+  max-width: 60ch;
 }
-.diptych[data-hover="time"]  .panel--world .panel__body,
-.diptych[data-hover="world"] .panel--time  .panel__body { opacity: 0.42; }
+.diptych[data-hover="world"] .panel:not(.panel--world) .panel__body,
+.diptych[data-hover="time"] .panel:not(.panel--time) .panel__body,
+.diptych[data-hover="harita"] .panel:not(.panel--harita) .panel__body { opacity: 0.42; }
 .panel__body > * { transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
 .panel__body { transition: opacity 0.7s var(--ease-out); }
 
@@ -163,11 +166,12 @@
 }
 .panel.is-hot .panel__index { color: var(--sprout); }
 .panel--time.is-hot .panel__index { color: var(--s-su); }
+.panel--harita.is-hot .panel__index { color: #72c2ef; }
 
 .panel__title {
   margin: 0 0 20px;
   font-family: var(--f-display);
-  font-size: var(--t-xxl);
+  font-size: clamp(2rem, 3.4vw, 4.2rem);
   font-weight: 800;
   font-stretch: 116%;
   line-height: 0.92;
@@ -234,21 +238,34 @@
   background: var(--s-su);
   box-shadow: 0 0 0 1px var(--s-su), 0 18px 46px -12px rgba(76, 201, 240, 0.55);
 }
+.panel--harita.is-hot .panel__cta {
+  border-color: #72c2ef;
+  background: #72c2ef;
+  box-shadow: 0 0 0 1px #72c2ef, 0 18px 46px -12px rgba(114, 194, 239, 0.55);
+}
+.prev--harita { animation: haritaNefes 14s ease-in-out infinite alternate; }
+@keyframes haritaNefes { from { transform: scale(1); } to { transform: scale(1.08); } }
 .panel.is-hot .panel__cta svg { translate: 5px 0; }
 
 /* ---------- yaşayan dikiş ---------- */
 .seam {
   position: absolute;
   top: 0; bottom: 0;
-  left: 50%;
+  left: 33.333%;
   width: 1px;
   z-index: 10;
   pointer-events: none;
   background: linear-gradient(180deg, transparent, var(--hairline) 12%, var(--hairline) 88%, transparent);
   transition: left 0.9s var(--ease-out), filter 0.9s;
 }
-.diptych[data-hover="world"] .seam { left: 66%; }
-.diptych[data-hover="time"]  .seam { left: 34%; }
+.seam--2 { left: 66.667%; }
+.seam--2 i { animation-delay: 2.6s; }
+.diptych[data-hover="world"] .seam  { left: 50%; }
+.diptych[data-hover="time"] .seam   { left: 25%; }
+.diptych[data-hover="harita"] .seam { left: 25%; }
+.diptych[data-hover="world"] .seam--2  { left: 75%; }
+.diptych[data-hover="time"] .seam--2   { left: 75%; }
+.diptych[data-hover="harita"] .seam--2 { left: 50%; }
 .seam i {
   position: absolute;
   left: -1px;
@@ -292,9 +309,10 @@
 @media (max-aspect-ratio: 4/5), (max-width: 820px) {
   .diptych,
   .diptych[data-hover="world"],
-  .diptych[data-hover="time"] {
+  .diptych[data-hover="time"],
+  .diptych[data-hover="harita"] {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
   }
   .seam { display: none; }
   .panel__body { padding-bottom: clamp(28px, 4vh, 48px); max-width: none; }
@@ -319,4 +337,9 @@
 .panel--time .panel__lede   { animation-delay: 0.48s; }
 .panel--time .panel__meta   { animation-delay: 0.55s; }
 .panel--time .panel__cta    { animation-delay: 0.62s; }
+.panel--harita .panel__index { animation-delay: 0.45s; }
+.panel--harita .panel__title { animation-delay: 0.54s; }
+.panel--harita .panel__lede  { animation-delay: 0.63s; }
+.panel--harita .panel__meta  { animation-delay: 0.70s; }
+.panel--harita .panel__cta   { animation-delay: 0.77s; }
 @keyframes riseIn { to { opacity: 1; transform: none; } }

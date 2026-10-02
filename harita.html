@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Limak Dünyada</title>
+<meta name="description" content="Limak'ın dünya genelindeki yatırımları — dokunun, yakınlaşın, keşfedin.">
+<link rel="stylesheet" href="assets/css/base.css?v=1">
+<link rel="stylesheet" href="assets/css/harita.css?v=6">
+<script src="assets/js/kilit.js?v=2"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2372c2ef'/%3E%3Ccircle cx='16' cy='16' r='8' stroke='%23002369' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+</head>
+<body class="harita">
+
+<div class="kilit" id="kilit" role="dialog" aria-modal="true" aria-labelledby="kilitBaslik">
+  <form class="kilit__kutu" id="kilitForm" autocomplete="off" novalidate>
+    <img class="kilit__logo" src="assets/img/logo-50yil.png" alt="Limak — 50. yıl" decoding="async">
+    <span class="eyebrow kilit__eye">Önizleme · Şifreli erişim</span>
+    <h1 class="kilit__baslik" id="kilitBaslik">Limak <em>Dünyada</em></h1>
+    <p class="kilit__not">Bu bölüm henüz önizleme aşamasında. Devam etmek için şifreyi girin.</p>
+    <label class="sr-only" for="kilitSifre">Şifre</label>
+    <input class="kilit__alan" id="kilitSifre" type="password" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="Şifre">
+    <p class="kilit__hata" id="kilitHata" aria-live="assertive"></p>
+    <button class="kilit__btn" type="submit">
+      Giriş
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <a class="kilit__cik" href="index.html">Ana sayfaya dön</a>
+  </form>
+</div>
+
+<header class="topbar">
+  <span class="brand">
+    <img class="brand__logo" src="assets/img/logo-50yil.png" alt="Limak — 50. yıl" decoding="async">
+    <span class="brand__sep" aria-hidden="true"></span>
+    <span class="brand__text">Limak <em>Dünyada</em></span>
+  </span>
+  <span class="olcek eyebrow">14 ülke · 3 kıta</span>
+  <a class="btn-back" href="index.html">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5m0 0 6-6m-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Çıkış
+  </a>
+</header>
+
+<main class="sahne" id="sahne">
+  <canvas class="kure" id="kure" aria-label="Limak'ın dünya genelindeki yatırımları"></canvas>
+  <div class="imlecler" id="imlecler"></div>
+  <div class="yedek" id="yedek" hidden></div>
+</main>
+
+<aside class="kart" id="kart" hidden aria-live="polite">
+  <button class="kart__x" id="kartX" type="button" aria-label="Kapat">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="kart__foto" id="kartFoto"></div>
+  <div class="kart__govde">
+    <span class="eyebrow kart__eye" id="kartEye"></span>
+    <h2 class="kart__baslik" id="kartBaslik"></h2>
+    <p class="kart__en" id="kartEn" lang="en"></p>
+    <p class="kart__meta" id="kartMeta"></p>
+    <ul class="kart__rakam" id="kartRakam"></ul>
+    <p class="kart__ozet" id="kartOzet"></p>
+  </div>
+</aside>
+
+<nav class="gezinti" aria-label="Harita gezintisi">
+  <button class="don don--geri" id="geriBtn" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Geri
+  </button>
+  <button class="don" id="donBtn" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    Dünyaya dön
+  </button>
+</nav>
+<p class="ipucu eyebrow" id="ipucu">
+  <span class="ipucu__el">Bir noktaya dokunun</span>
+  <span class="ipucu__tur">Otomatik tur · durdurmak için dokunun</span>
+</p>
+<p class="atif">Görüntü: NASA Earth Observatory · Blue Marble</p>
+<span class="grain" aria-hidden="true"></span>
+
+<script src="assets/vendor/three.min.js?v=1"></script>
+<script src="assets/img/dunya/zemin.js?v=1"></script>
+<script src="assets/data/dunya.js?v=2"></script>
+<script src="assets/js/harita-mat.js?v=1"></script>
+<script src="assets/js/harita-kure.js?v=3"></script>
+<script src="assets/js/harita.js?v=5"></script>
+</body>
+</html>
