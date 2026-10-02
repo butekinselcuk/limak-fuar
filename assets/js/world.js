@@ -1130,30 +1130,24 @@
     ctx.restore();
   }
 
-  function drawFX() {
-    ctx.clearRect(0, 0, FXW, FXH);
-    ctx.globalCompositeOperation = "lighter";
+  /* KAMERA DALIŞI ile TUVAL — dalış (.scene.is-punch → scale 1.13) yalnız
+     sahne katmanına uygulanır. Tuvaldeki sahneye bağlı çizimler (uçak,
+     ortam ışıkları, önlem efektleri, halkalar) aynı dönüşümle çizilmezse
+     dalış sırasında yerinden kayıyordu: başka bir yatırım konunca uçak
+     pistin dışına çıkıyordu. Sahnenin O ANKİ dönüşümü (geçişin ara değeri
+     dahil) okunur; yalnız dalış sürerken ve geri açılırken. */
+  let dalisBitis = 0;
+  function sahneDonusumu() {
+    if (performance.now() > dalisBitis) return null;
+    const cs = getComputedStyle(scene);
+    if (!cs.transform || cs.transform === "none") return null;
+    const m = new DOMMatrixReadOnly(cs.transform);
+    if (m.isIdentity) return null;
+    const [ox, oy] = cs.transformOrigin.split(" ").map(parseFloat);
+    return { m, ox, oy };
+  }
 
-    /* yerleşen sektörlerin yaşayan efektleri */
-    const tSec = performance.now() / 1000;
-    for (const id of placed) {
-      const z = zoneScr[id], f = AMBFX[id];
-      if (z && f) f(tSec, z);
-    }
-    ucakCiz(tSec);
-    if (rotalar.length) drawRotalar(tSec * 1000);
-    if (acikFix && zoneScr[acikFix]) isaretle(zoneScr[acikFix], LEAF[acikFix], tSec);
-    if (asama === 2) drawOnlemFx(tSec);
-    for (const m of motes) {
-      m.x += m.vx; m.y += m.vy;
-      if (m.y < -10) { m.y = FXH + 10; m.x = Math.random() * FXW; }
-      if (m.x < -10) m.x = FXW + 10; else if (m.x > FXW + 10) m.x = -10;
-      // çölde kum tozu, dünya yeşerdikçe filiz zerreciği
-      const pr = placed.size / Math.max(1, LEAVES.length);
-      const R2 = Math.round(214 - 18 * pr), G2 = Math.round(196 + 59 * pr), B2 = Math.round(150 + 20 * pr);
-      ctx.fillStyle = `rgba(${R2},${G2},${B2},${m.a * (0.34 + pr * 0.16)})`;
-      ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.284); ctx.fill();
-    }
+  function drawHalkalar() {
     for (let i = rings.length - 1; i >= 0; i--) {
       const R = rings[i];
       R.r += R.v; R.v *= 0.986; R.a -= 0.0102;
@@ -1173,6 +1167,41 @@
       if (s.a <= 0) { sparks.splice(i, 1); continue; }
       ctx.fillStyle = `rgba(${s.color},${s.a})`;
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r * s.a, 0, 6.284); ctx.fill();
+    }
+  }
+
+  function drawFX() {
+    ctx.clearRect(0, 0, FXW, FXH);
+    ctx.globalCompositeOperation = "lighter";
+
+    const D = sahneDonusumu();
+    if (D) {
+      ctx.save();
+      ctx.translate(D.ox, D.oy);
+      ctx.transform(D.m.a, D.m.b, D.m.c, D.m.d, D.m.e, D.m.f);
+      ctx.translate(-D.ox, -D.oy);
+    }
+    /* yerleşen sektörlerin yaşayan efektleri */
+    const tSec = performance.now() / 1000;
+    for (const id of placed) {
+      const z = zoneScr[id], f = AMBFX[id];
+      if (z && f) f(tSec, z);
+    }
+    ucakCiz(tSec);
+    if (rotalar.length) drawRotalar(tSec * 1000);
+    if (acikFix && zoneScr[acikFix]) isaretle(zoneScr[acikFix], LEAF[acikFix], tSec);
+    if (asama === 2) drawOnlemFx(tSec);
+    drawHalkalar();
+    if (D) ctx.restore();
+    for (const m of motes) {
+      m.x += m.vx; m.y += m.vy;
+      if (m.y < -10) { m.y = FXH + 10; m.x = Math.random() * FXW; }
+      if (m.x < -10) m.x = FXW + 10; else if (m.x > FXW + 10) m.x = -10;
+      // çölde kum tozu, dünya yeşerdikçe filiz zerreciği
+      const pr = placed.size / Math.max(1, LEAVES.length);
+      const R2 = Math.round(214 - 18 * pr), G2 = Math.round(196 + 59 * pr), B2 = Math.round(150 + 20 * pr);
+      ctx.fillStyle = `rgba(${R2},${G2},${B2},${m.a * (0.34 + pr * 0.16)})`;
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.284); ctx.fill();
     }
     ctx.globalCompositeOperation = "source-over";
     requestAnimationFrame(drawFX);
@@ -1881,6 +1910,7 @@
     if (z && !reduce && !sessiz) {
       scene.style.transformOrigin = `${z.px}% ${z.py}%`;
       scene.classList.add("is-punch");
+      dalisBitis = performance.now() + 2100 + 2200;   // dalış + geri açılış
       clearTimeout(punchT);
       punchT = setTimeout(() => scene.classList.remove("is-punch"), 2100);
     }
