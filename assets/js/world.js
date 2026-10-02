@@ -29,8 +29,10 @@
      Toplam 100 olacak şekilde dağıtıldı. */
   const ETKI = {
     // 02.10: AVM kalktı; payı konut/stadyum/gıda/turizm'e dağıtıldı (toplam 100)
-    cimento: 16, port: 12, hava: 12, konut: 12, stadyum: 7, kopru: 7, otoyol: 8,
+    // 02.10 (2): konut + stadyum = Yaşam Alanı
+    cimento: 15, port: 12, hava: 12, yasam: 17, kopru: 7, otoyol: 8,
     gunes: 3, hidro: 4, jeotermal: 3, gida: 8, turizm: 8,
+    ruzgar: 3,                       // 02.10 Toplantı Özeti: rüzgâr eklendi
   };
 
   /* görsel önbelleği: script sürümü görsellere de damgalanır; sahne
@@ -108,6 +110,8 @@
     const abs = (p) => new URL(p, document.baseURI).href;
     LEAVES.forEach((s) => {
       if (!SCENE.regions || !SCENE.regions[s.id]) return;   // henüz üretilmemişse atla
+      // fotoğrafta değişiklik yapmayan yatırım (rüzgâr: türbinler DOM'da)
+      if (SCENE.regions[s.id].katmansiz) return;
       const d = document.createElement("div");
       d.className = "sector";
       d.dataset.sector = s.id;
@@ -140,10 +144,94 @@
         h.className = rgn.heal ? "heal heal--iz" : "heal";
         h.dataset.sector = s.id;
         if (rgn.heal) setMaske(h, rgn.heal);
-        h.style.backgroundImage = `url("${abs("assets/img/scene/plate-alive.jpg")}?v=${AV}")`;
+        // 02.10 (2): yatırımın çevresi YEŞİL kareyle (kuraklıksız) canlanır
+        h.style.backgroundImage = `url("${abs("assets/img/scene/plate-yesil.jpg")}?v=${AV}")`;
         heals.appendChild(h);
         healOf[s.id] = h;
       }
+    });
+    yamalariKur();
+    turbinleriKur();
+  }
+
+  /* ============================================================
+     YAMALAR (02.10 Toplantı Özeti) — önlem alınınca sahnede beliren ya
+     da kalkan küçük fotoğraf parçaları: çatı panelleri, karbon yakalama
+     tesisi, şarj istasyonları (ekle) ve çöp konteynerleri (kaldir).
+     tools/rev2/yama.py üretir; yalnız değişen pikseller saydam PNG'dir.
+     Kap sahnenin cover geometrisine oturur, kamera dalışıyla ölçeklenir.
+     ============================================================ */
+  const yamaOf = {};
+  const yamaKap = document.createElement("div");
+  yamaKap.className = "yamalar";
+  yamaKap.setAttribute("aria-hidden", "true");
+  const _grade = scene.querySelector(".scene__grade");
+  if (_grade) _grade.before(yamaKap); else scene.appendChild(yamaKap);
+  const yuzde = (v, t) => (v / t * 100).toFixed(4) + "%";
+  function yamalariKur() {
+    yamaKap.replaceChildren();
+    for (const k of Object.keys(yamaOf)) delete yamaOf[k];
+    const abs = (p) => new URL(p, document.baseURI).href;
+    for (const [ad, Y] of Object.entries(SCENE.yamalar || {})) {
+      const [x, y, w, h] = Y.kutu;
+      const im = document.createElement("img");
+      im.className = "yama yama--" + Y.mod;
+      im.alt = ""; im.decoding = "async"; im.draggable = false;
+      im.src = `${abs(`assets/img/scene/y-${ad}.png`)}?v=${AV}`;
+      Object.assign(im.style, { left: yuzde(x, SW), top: yuzde(y, SH), width: yuzde(w, SW), height: yuzde(h, SH) });
+      yamaKap.appendChild(im);
+      yamaOf[ad] = { el: im, ...Y };
+    }
+  }
+  /* görünürlük durumdan hesaplanır: ekle → önlem alınmışsa,
+     kaldir → yatırım kuruluysa VE önlem alınmamışsa */
+  function yamaTazele() {
+    for (const Y of Object.values(yamaOf)) {
+      const kurulu = placed.has(Y.sektor), alindi = uygulanan.has(Y.sektor + ":" + Y.onlem);
+      Y.el.classList.toggle("is-on", kurulu && (Y.mod === "ekle" ? alindi : !alindi));
+    }
+    turbinKap.classList.toggle("is-on", placed.has("ruzgar"));
+  }
+  /* yamanın sahnedeki merkezi (efektler orada çizilir) */
+  function yamaMerkez(sektor, onlem) {
+    const Y = Object.values(yamaOf).find((v) => v.sektor === sektor && v.onlem === onlem);
+    if (!Y) return null;
+    const [x, y, w, h] = Y.kutu;
+    return ekr(x + w / 2, y + h / 2);
+  }
+
+  /* ============================================================
+     RÜZGÂR (02.10 Toplantı Özeti, slayt 1: "Rüzgar eklenecek — Dağa")
+     Türbinler dağın sırt hattında; tabanları gökyüzü sınırından ölçüldü
+     (plate-dunya.jpg, sütun sütun). Kule ve kanatlar DOM'da çizilir:
+     kanatlar ekran kartında döner (yalnız transform), sahneyle ölçeklenir.
+     [x, taban y, göbek yüksekliği, kanat boyu] — sahne pikseli
+     ============================================================ */
+  const TURBIN = [
+    [1452, 197, 28, 14], [1500, 179, 29, 14.5], [1550, 164, 30, 15], [1600, 179, 29, 14.5],
+    [1765, 182, 31, 15.5], [1812, 164, 32, 16], [1858, 156, 32, 16],
+  ];
+  const turbinKap = document.createElement("div");
+  turbinKap.className = "turbinler";
+  turbinKap.setAttribute("aria-hidden", "true");
+  yamaKap.before(turbinKap);
+  function turbinleriKur() {
+    turbinKap.replaceChildren();
+    TURBIN.forEach(([x, yb, h, R], i) => {
+      const t = document.createElement("div");
+      t.className = "turbin";
+      Object.assign(t.style, {
+        left: yuzde(x - R, SW), top: yuzde(yb - h - R, SH),
+        width: yuzde(2 * R, SW), height: yuzde(h + R, SH),
+      });
+      t.style.setProperty("--gobek", (R / (h + R) * 100).toFixed(3) + "%");
+      t.style.setProperty("--kule", (h / (h + R) * 100).toFixed(3) + "%");
+      t.style.setProperty("--gecik", (i * 0.12).toFixed(2) + "s");
+      t.style.setProperty("--sure", (4.6 + ((i * 37) % 9) * 0.18).toFixed(2) + "s");
+      t.style.setProperty("--faz", (-(i * 1.37) % 5).toFixed(2) + "s");
+      t.innerHTML = '<span class="turbin__kule"></span><span class="turbin__gondol"></span>' +
+                    '<span class="turbin__rotor"><span class="turbin__kanat"></span></span>';
+      turbinKap.appendChild(t);
     });
   }
 
@@ -351,7 +439,7 @@
         if ((t * 1.6 + s * 4) % 3 < 0.5)
           glowDot(z.x + ox * z.rx * 0.5, z.y + z.ry * 0.5, 1.6, "232,250,255", 0.55);
       // enerji hattı: baraj -> en yakın yerleşim
-      const c = zoneScr.konut;
+      const c = zoneScr.yasam;
       if (!c) return;
       const mx = (z.x + c.x) / 2, my = Math.min(z.y, c.y) - 80 * sceneScale;
       ctx.strokeStyle = "rgba(120,225,255,0.06)"; ctx.lineWidth = 1.3;
@@ -395,6 +483,14 @@
         const on = Math.sin(t * 0.5 + s * 40) > -0.2;      // pencereler yavaş yanar
         if (on) glowDot(z.x + ox * z.rx * 0.72, z.y + oy * z.ry * 0.52,
                         1.3 * sceneScale, "255,214,140", 0.3 + s * 0.28);
+      }
+    },
+    yasam(t, z) {
+      const alt = (SCENE.regions.yasam && SCENE.regions.yasam.alt) || {};
+      for (const [ad, [cx, cy, rx, ry]] of Object.entries(alt)) {
+        const P = ekr(cx, cy);
+        const f = AMBFX[ad];
+        if (f) f(t, { x: P.x, y: P.y, rx: rx * sceneScale, ry: ry * sceneScale });
       }
     },
     gida(t, z) {
@@ -490,6 +586,26 @@
     kule: [846, 440],
     pistUzak: [[740, 363], [767, 363]],           // uzak uç sol/sağ kenar
     pistYakin: [[588, 514], [652, 506]],          // yakın uç sol/sağ kenar
+    // 02.10 Toplantı Özeti
+    baca: [[1335, 326], [1399, 353]],             // çimento: ön ısıtıcı kulesi + taşıyıcı kulesi tepesi
+    otelPencere: [[364, 790], [364, 800], [374, 794], [374, 804], [386, 796], [405, 788],
+                  [406, 796], [412, 788], [421, 787], [422, 796], [422, 805], [434, 789],
+                  [434, 798], [444, 790], [444, 798], [439, 806], [456, 790], [460, 796]],
+    // gıda tesisi: çatı köşeleri, duvar dipleri, avlu
+    gidaSaha: [[1486, 704], [1547, 697], [1603, 713], [1540, 723], [1486, 730], [1539, 752],
+               [1605, 744], [1470, 745], [1500, 746], [1562, 766]],
+    gidaCati: [[1486, 704], [1547, 697], [1603, 713], [1540, 723]],
+    // yaşam alanı su şebekesi: ana hat + binalara giden kollar
+    boru: [
+      [[1110, 906], [1200, 889], [1300, 885], [1400, 892], [1500, 905], [1585, 916]],
+      [[1170, 891], [1150, 852], [1118, 830]],
+      [[1150, 852], [1132, 772], [1162, 708]],
+      [[1240, 887], [1238, 846]],
+      [[1322, 885], [1326, 858]],
+      [[1432, 893], [1440, 868]],
+      [[1500, 905], [1520, 872], [1546, 850]],
+    ],
+    yasamCati: [[1235, 731], [1325, 674], [1440, 712], [1325, 786], [1440, 641]],  // kule tepeleri
   };
   const kimlikTohum = (s) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 997, 7) / 997;
   const bez = (a, c, b, p) => {
@@ -530,8 +646,118 @@
     ctx.beginPath(); ctx.ellipse(z.x, z.y, (6 + nab * 22) * sceneScale, (3 + nab * 9) * sceneScale, 0, 0, 6.284); ctx.stroke();
   }
 
+  /* "bütün yenilenebilir enerji tıklandığında GES'e atomlar gitsin gelsin":
+     kaynak GES; kurulu değilse başka bir santral (rüzgâr, hidro, jeotermal) */
+  function enerjiKaynagi() {
+    for (const k of ["gunes", "ruzgar", "hidro", "jeotermal"])
+      if (placed.has(k) && zoneScr[k]) return zoneScr[k];
+    return null;
+  }
+
+  /* "lighter" ile çizilemeyen işler (koyulaştırma, yazı) */
+  function normalCiz(fn) {
+    ctx.save(); ctx.globalCompositeOperation = "source-over"; fn(); ctx.restore();
+  }
+
+  /* şarj istasyonunun üstünde atan yeşil halkalar */
+  function sarjNabzi(t, P, id) {
+    if (!P) return;
+    for (let i = 0; i < 2; i++) {
+      const p = (t / 1.6 + i * 0.5 + kimlikTohum(id)) % 1;
+      const Q = { x: P.x + (i ? 5 : -5) * sceneScale, y: P.y - 2 * sceneScale };
+      glowDot(Q.x, Q.y, 1.8 * sceneScale, "120,255,160", 0.9);
+      ctx.strokeStyle = `rgba(120,255,160,${(1 - p) * 0.7})`;
+      ctx.lineWidth = 1.3 * sceneScale;
+      ctx.beginPath(); ctx.ellipse(Q.x, Q.y, (3 + p * 14) * sceneScale, (1.5 + p * 6) * sceneScale, 0, 0, 6.284); ctx.stroke();
+    }
+  }
+
+  /* FIRTINA / YAĞMUR — iklim dayanıklılığı (02.10): "yağmur fırtına kopsun,
+     görsel değişmesin, binanın dayanıklılığı vurgulanmış olur". Bulut
+     gölgesi + eğik yağmur + (yaşam alanında) paratonere inen yıldırım;
+     yapı katmanlarına dokunulmaz, fırtına geçer, her şey yerinde kalır.
+     14 sn'lik döngü. */
+  function firtina(t, z, id, { simsek = false, siddet = 1 } = {}) {
+    const s = (t + kimlikTohum(id) * 14) % 14;
+    const env = s < 1.2 ? s / 1.2 : s < 8.4 ? 1 : s < 10 ? 1 - (s - 8.4) / 1.6 : 0;
+    if (env <= 0) return;
+    const rx = z.rx * 1.3, ry = z.ry * 1.7;
+    const cx = z.x, cy = z.y - ry * 0.25;
+    // eliptik, kenarsız bir alan: dikdörtgen dolgu sert kenar bırakıyordu
+    const elips = (renk, al0, al1) => {
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(1, ry / rx);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      g.addColorStop(0, `rgba(${renk},${al0})`);
+      g.addColorStop(0.55, `rgba(${renk},${al1})`);
+      g.addColorStop(1, `rgba(${renk},0)`);
+      ctx.fillStyle = g; ctx.fillRect(-rx, -rx, 2 * rx, 2 * rx);
+      ctx.restore();
+    };
+    normalCiz(() => {
+      elips("10,18,30", 0.6 * env * siddet, 0.42 * env * siddet);     // bulut gölgesi
+      // yağmur: eğik, hızlı çizgiler; kenara doğru incelir (4 tonda toplu çizim)
+      ctx.lineWidth = Math.max(0.7, 0.8 * sceneScale);
+      ctx.lineCap = "round";
+      const kova = [[], [], [], []];
+      const n = Math.round(340 * siddet);
+      for (const [ox, oy, q] of ptsFor("yagmur-f-" + id, n, 4242)) {
+        const p = (t * (1.7 + q * 0.8) + q * 7 + oy) % 1;
+        const x = cx + ox * rx - p * 22 * sceneScale;
+        const y = cy - ry + p * 2 * ry;
+        const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+        if (d >= 1) continue;
+        kova[Math.min(3, Math.floor(d * 4))].push(x, y);
+      }
+      kova.forEach((k, i) => {
+        if (!k.length) return;
+        ctx.strokeStyle = `rgba(206,222,242,${(0.46 - i * 0.1) * env})`;
+        ctx.beginPath();
+        for (let j = 0; j < k.length; j += 2) {
+          ctx.moveTo(k[j], k[j + 1]);
+          ctx.lineTo(k[j] - 6 * sceneScale, k[j + 1] + 22 * sceneScale);
+        }
+        ctx.stroke();
+      });
+    });
+    if (!simsek) return;
+    // yıldırım: iki kez, yüksek kulelerin paratonerine iner; yapı sağlam kalır
+    for (const an of [2.8, 6.1]) {
+      const d = s - an;
+      if (d < 0 || d > 0.5) continue;
+      const parla = d < 0.1 ? 1 : Math.max(0, 1 - (d - 0.1) / 0.4);
+      const hedef = ekr(...FXN.yasamCati[an < 4 ? 1 : 4]);
+      normalCiz(() => elips("232,240,255", 0.34 * parla, 0.16 * parla));
+      const yol = [];
+      let x = hedef.x + 34 * sceneScale, y = hedef.y - 190 * sceneScale;
+      yol.push([x, y]);
+      for (let k = 1; k <= 8; k++) {
+        const u = k / 8;
+        x = hedef.x + 34 * sceneScale * (1 - u) + (k < 8 ? Math.sin(an * 9 + k * 2.3) * 11 * sceneScale : 0);
+        y = hedef.y - 190 * sceneScale * (1 - u);
+        yol.push([x, y]);
+      }
+      const cizgi = (w, renk) => {
+        ctx.strokeStyle = renk; ctx.lineWidth = w; ctx.lineJoin = "round";
+        ctx.beginPath(); yol.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+        // küçük çatal
+        const [fx, fy] = yol[3];
+        ctx.moveTo(fx, fy); ctx.lineTo(fx - 16 * sceneScale, fy + 22 * sceneScale);
+        ctx.stroke();
+      };
+      cizgi(7 * sceneScale, `rgba(170,200,255,${0.28 * parla})`);
+      cizgi(2.4 * sceneScale, `rgba(245,248,255,${parla})`);
+      // darbe kulede söner: koruma halkası parlar, bina değişmez
+      glowDot(hedef.x, hedef.y, 4 * sceneScale, "210,235,255", parla);
+      ctx.strokeStyle = `rgba(160,225,255,${0.75 * parla})`;
+      ctx.lineWidth = 1.6 * sceneScale;
+      ctx.beginPath();
+      ctx.ellipse(hedef.x, hedef.y, (12 + 30 * (1 - parla)) * sceneScale, (5 + 12 * (1 - parla)) * sceneScale, 0, 0, 6.284);
+      ctx.stroke();
+    }
+  }
+
   const ONLEMFX = {
-    yeni(t, z, id) { enerjiAkisi(t, zoneScr.gunes, z, id); },
+    yeni(t, z, id) { enerjiAkisi(t, enerjiKaynagi(), z, id); },
     akil(t, z, id) {
       if (id === "port") {
         // lojistik takip: saha ışıkları sırayla yanıp söner, bir "tarama" dolaşır
@@ -542,6 +768,24 @@
           if (yan) glowDot(P.x, P.y, (i === tara ? 2.8 : 2) * sceneScale,
                            i === tara ? "160,255,210" : "110,220,255", i === tara ? 1 : 0.8);
         });
+        return;
+      }
+      if (id === "gida") {
+        // 02.10: "Port'taki gibi ışık yansın, uçuşan ışıklar gezinebilir"
+        const tara = Math.floor(t * 6) % FXN.gidaSaha.length;
+        FXN.gidaSaha.forEach(([sx, sy], i) => {
+          const P = ekr(sx, sy);
+          const yan = Math.sin(t * 4.2 + i * 1.9) > 0.35 || i === tara;
+          if (yan) glowDot(P.x, P.y, (i === tara ? 2.6 : 1.8) * sceneScale,
+                           i === tara ? "160,255,210" : "120,240,220", i === tara ? 1 : 0.75);
+        });
+        // çatı çevresinde dolaşan ışıklar
+        const C = FXN.gidaCati.map(([x, y]) => ekr(x, y)), n = C.length;
+        for (let i = 0; i < 3; i++) {
+          const f = ((t * 0.32 + i / 3) % 1) * n;
+          const a = C[Math.floor(f) % n], b = C[(Math.floor(f) + 1) % n], u = f % 1;
+          glowDot(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u - 3 * sceneScale, 2 * sceneScale, "170,255,225", 0.9);
+        }
         return;
       }
       // akıllı enerji yönetimi: tesis üstünde atan küçük bir ağ
@@ -577,6 +821,16 @@
       }
     },
     elek(t, z, id) {
+      if (id === "turizm") {
+        // 02.10: "otelin ışıkları yanıp sönebilir, şarj istasyonu eklensin"
+        FXN.otelPencere.forEach(([x, y], i) => {
+          const a = Math.max(0, Math.sin(t * 1.7 + i * 0.83));
+          const P = ekr(x, y);
+          if (a > 0.05) glowDot(P.x, P.y, 1.2 * sceneScale, "255,226,150", 0.25 + a * 0.6);
+        });
+        sarjNabzi(t, yamaMerkez("turizm", "elek"), id);
+        return;
+      }
       // elektrikli araçlar: mavi ışıklar sahada dolaşır
       const yol = id === "port" ? FXN.limanSaha.map(([x, y]) => ekr(x, y)) : null;
       for (let i = 0; i < 5; i++) {
@@ -594,6 +848,8 @@
       }
     },
     sarj(t, z, id) {
+      const Y = yamaMerkez(id, "sarj");
+      if (Y) { sarjNabzi(t, Y, id); return; }
       for (const [ox, , s] of ptsFor("sarj-" + id, 3, 515)) {
         const P = { x: z.x + ox * z.rx * 0.6, y: z.y + (s - 0.5) * z.ry * 0.5 };
         const p = (t / 1.6 + s) % 1;
@@ -603,7 +859,9 @@
         ctx.beginPath(); ctx.ellipse(P.x, P.y, (3 + p * 14) * sceneScale, (1.5 + p * 6) * sceneScale, 0, 0, 6.284); ctx.stroke();
       }
     },
-    iklim(t, z) {
+    iklim(t, z, id) {
+      if (id === "yasam") { firtina(t, z, id, { simsek: true }); return; }
+      if (id === "otoyol" || id === "kopru") { firtina(t, z, id, { siddet: 0.75 }); return; }
       // koruma kubbesi: yapının üstünde ince bir yay, üzerinde dolaşan parıltı
       ctx.strokeStyle = "rgba(140,220,255,0.22)";
       ctx.lineWidth = 1.5 * sceneScale;
@@ -611,7 +869,40 @@
       const an = Math.PI + ((t * 0.35) % 1) * Math.PI;
       glowDot(z.x + Math.cos(an) * z.rx * 0.75, z.y + Math.sin(an) * z.ry * 1.25, 2.2 * sceneScale, "170,235,255", 0.85);
     },
-    su(t, z, id) { ONLEMFX.yagmur(t, z, id); },
+    su(t, z, id) {
+      if (id !== "yasam") { ONLEMFX.yagmur(t, z, id); return; }
+      // 02.10: "Su verimliliği: borular belirip kaybolsa" — yeraltı şebekesi
+      // belirir, içinden su akar, söner (7 sn'lik döngü)
+      const s = t % 7;
+      const a = s < 1 ? s : s < 4.6 ? 1 : s < 5.6 ? 1 - (s - 4.6) : 0;
+      if (a <= 0) return;
+      const hatlar = FXN.boru.map((h) => h.map(([x, y]) => ekr(x, y)));
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      for (const [w, al] of [[5.5, 0.12], [2.2, 0.5]]) {
+        ctx.strokeStyle = `rgba(90,190,255,${al * a})`;
+        ctx.lineWidth = w * sceneScale;
+        ctx.beginPath();
+        for (const h of hatlar) { ctx.moveTo(h[0].x, h[0].y); for (const P of h.slice(1)) ctx.lineTo(P.x, P.y); }
+        ctx.stroke();
+      }
+      // akan su: her hatta ilerleyen damlalar
+      hatlar.forEach((h, i) => {
+        const L = h.slice(1).reduce((t2, P, k) => t2 + Math.hypot(P.x - h[k].x, P.y - h[k].y), 0);
+        for (let j = 0; j < 3; j++) {
+          let d = ((t * 0.35 + j / 3 + i * 0.17) % 1) * L;
+          for (let k = 1; k < h.length; k++) {
+            const sl = Math.hypot(h[k].x - h[k - 1].x, h[k].y - h[k - 1].y);
+            if (d <= sl) {
+              const u = d / sl;
+              glowDot(h[k - 1].x + (h[k].x - h[k - 1].x) * u, h[k - 1].y + (h[k].y - h[k - 1].y) * u,
+                      1.8 * sceneScale, "170,230,255", a);
+              break;
+            }
+            d -= sl;
+          }
+        }
+      });
+    },
     yagmur(t, z, id) {
       for (const [ox, , s] of ptsFor("yagmur-" + id, 7, 828)) {
         const p = (t * 0.7 + s) % 1;
@@ -620,7 +911,9 @@
       }
     },
     atik(t, z, id) {
-      // geri kazanım döngüsü: üç zerre küçük bir halkada döner
+      // geri kazanım döngüsü: konteynerlerin kalktığı yerde üç zerre döner
+      const Y = yamaMerkez(id, "atik");
+      if (Y) z = { x: Y.x, y: Y.y - 6 * sceneScale, rx: 40 * sceneScale, ry: 20 * sceneScale };
       const r = Math.min(z.rx, z.ry * 2) * 0.28;
       for (let i = 0; i < 3; i++) {
         const an = t * 1.6 + i * 2.094;
@@ -635,17 +928,37 @@
                 1.7 * sceneScale, "180,255,170", Math.sin(Math.PI * p) * 0.85);
       }
     },
-    yakit(t, z) {
-      const F = { x: z.x - z.rx * 0.2, y: z.y - z.ry * 0.05 };
-      for (let i = 0; i < 5; i++) {
-        const a = 0.4 + 0.6 * Math.abs(Math.sin(t * 9 + i * 1.3));
-        glowDot(F.x + (i - 2) * 3 * sceneScale, F.y - a * 4 * sceneScale, 1.5 * sceneScale, "120,255,170", a * 0.8);
+    yakit(t) {
+      // 02.10: "bacalar yanıp sönsün (bacalardaki değişimi vurgulamak için)
+      // + bir bacadan H2 sembolü çıksın"
+      FXN.baca.forEach(([x, y], i) => {
+        const P = ekr(x, y);
+        const a = Math.max(0, Math.sin(t * 3.2 + i * 2.2));
+        glowDot(P.x, P.y, (1.6 + a * 1.4) * sceneScale, "140,255,190", 0.25 + a * 0.75);
+      });
+      const B = ekr(...FXN.baca[0]);
+      for (let j = 0; j < 2; j++) {
+        const p = (t / 4.2 + j / 2) % 1;
+        const a = Math.sin(Math.PI * Math.min(1, p * 1.1)) * (p < 0.92 ? 1 : (1 - p) / 0.08);
+        const x = B.x + Math.sin(p * 5 + j) * 4 * sceneScale, y = B.y - (8 + p * 54) * sceneScale;
+        const r = (9.5 + p * 2.5) * sceneScale;
+        normalCiz(() => {
+          ctx.fillStyle = `rgba(10,46,34,${0.62 * a})`;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, 6.284); ctx.fill();
+          ctx.strokeStyle = `rgba(150,255,200,${0.95 * a})`;
+          ctx.lineWidth = 1.2 * sceneScale;
+          ctx.stroke();
+          ctx.fillStyle = `rgba(225,255,238,${a})`;
+          ctx.font = `800 ${(11 + p * 2) * sceneScale}px Manrope, Inter, system-ui, sans-serif`;
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText("H₂", x, y + 0.5 * sceneScale);
+        });
       }
     },
     ccus(t, z) {
       // bacadan yükselen karbon zerreleri kıvrılıp yakalama noktasına iner
-      const B = { x: z.x + z.rx * 0.15, y: z.y - z.ry * 0.45 };
-      const Y = { x: z.x + z.rx * 0.55, y: z.y + z.ry * 0.1 };
+      const B = ekr(...FXN.baca[0]);
+      const Y = yamaMerkez("cimento", "ccus") || { x: z.x + z.rx * 0.55, y: z.y + z.ry * 0.1 };
       const C = { x: (B.x + Y.x) / 2, y: B.y - 70 * sceneScale };
       for (let i = 0; i < 6; i++) {
         const p = (t * 0.35 + i / 6) % 1;
@@ -884,7 +1197,8 @@
     const dal = leaf.parent ? SECTORS.find((s) => s.id === leaf.parent) : null;
     // Dalın koşulu (İnşaat → çimento) önce, yaprağın kendi koşulu
     // (Köprü → otoyol, Konut → gıda, Çimento → enerji) sonra; hepsi sağlanmalı.
-    for (const kaynak of [dal, leaf]) {
+    // `gerekler`: birden çok koşulun HEPSİ (Yaşam Alanı → çimento ve gıda)
+    for (const kaynak of [dal, leaf, ...((leaf && leaf.gerekler) || [])]) {
       if (kaynak && !ihtiyacVar(kaynak.needs, kume)) {
         uyarNeden = kaynak.needsWhy || "";
         return `Önce ${ihtiyacAdi(kaynak)} yerleşmeli`;
@@ -1349,7 +1663,7 @@
     3: "Temel atıldı",
     6: "Bölge şekilleniyor",
     9: "Ekosistem birbirine bağlanıyor",
-    11: "Son adım kaldı",            // 02.10: AVM kalktı, 12 yatırım
+    11: "Son adım kaldı",            // 02.10: 12 yatırım (rüzgâr eklendi)
   };
   function showMilestone(n) {
     const txt = MILESTONES[n];
@@ -1489,6 +1803,7 @@
     const L = layerOf[id];
     if (L) { L.classList.remove("is-on", "is-ghost"); L.style.removeProperty("--ghost"); }
     healOf[id]?.classList.remove("is-on");
+    yamaTazele();
     // yerleşirken eklenen zerreler de çekilir — dünya küçülünce hava da sakinleşir
     motes.splice(0, Math.min(motes.length, Math.round(10 + (placed.size / LEAVES.length) * 22)));
     if (!reduce && zoneScr[id]) ring("255,196,160", 0.7, 0.5, zoneScr[id]);
@@ -1558,6 +1873,7 @@
 
     /* bölgesel iyileşme: bu yatırım KENDİ bölgesini anında yeşertir */
     healOf[sector.id]?.classList.add("is-on");
+    yamaTazele();                                // konteynerler, türbinler
 
     /* kamera dalışı: sahne kısa süre bölgeye yaklaşır, sonra geri açılır.
        Geri alma ile geri getirilen yatırımda dalış ve künye yok (sessiz). */
@@ -1807,6 +2123,7 @@
     const anahtar = id + ":" + o.id;
     if (uygulanan.has(anahtar)) return;
     uygulanan.add(anahtar);
+    yamaTazele();                                // panel belirir / konteyner kalkar
     if (kayit) { gecmis.push({ tip: "onlem", id, oid: o.id }); tazeleUndo(); }
     tazeleFixKart(anahtar);
     Snd.drop();
@@ -1816,6 +2133,8 @@
       const rgb = rgbOf(s.color);
       rotaAt(id, rgb);                       // müşterinin istediği "dijital rota"
       if (z) { ring(rgb, 1.2, 0.9, z); burst(26, rgb, z); }
+      const ym = yamaMerkez(id, o.id);
+      if (ym) { ring(rgb, 0.8, 0.8, ym); burst(14, rgb, ym); }
     }
     if (o.bilgi) sonBilgi = { s, o };        // final kartı buradan beslenir
     pusTazele();
@@ -1830,6 +2149,7 @@
     const anahtar = id + ":" + oid;
     if (!uygulanan.has(anahtar)) return;
     uygulanan.delete(anahtar);
+    yamaTazele();
     lastInput = performance.now();
     if (kayit) { gecmis.push({ tip: "onlemGeri", id, oid }); tazeleUndo(); }
     tazeleFixKart(anahtar);
@@ -1991,6 +2311,7 @@
       L.style.removeProperty("--ghost");
     });
     Object.values(healOf).forEach((h) => h.classList.remove("is-on"));
+    yamaTazele();
     $("intro")?.classList.remove("is-done");
     $("milestone")?.classList.remove("is-show");
     scene.classList.remove("is-punch");

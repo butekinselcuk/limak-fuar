@@ -24,7 +24,7 @@ window.LIMAK_SECTORS = [
     sub: "Cement",
     color: "#cdbfa4",
     // 02.10 revizyonu: "enerji olmadan çimento olamaz" — dizi = biri yeter
-    needs: ["gunes", "hidro", "jeotermal"],
+    needs: ["gunes", "hidro", "jeotermal", "ruzgar"],
     needsName: "bir enerji santrali",
     needsWhy: "Enerji olmadan çimento üretilemez; önce bir santral kurulur.",
     icon: "M4 20h16M6 20V10l6-4 6 4v10M9 20v-5h6v5M3 10l9-6 9 6",
@@ -88,34 +88,23 @@ window.LIMAK_SECTORS = [
       "Limak'ın çıkış noktası ve hâlâ omurgası. 200'den fazla tamamlanmış proje, 25 milyar doları aşan toplam değer. ENR'nin 2026 listesinde dünyanın en büyük uluslararası müteahhitleri arasında 51. sırada.",
     children: [
       {
-        id: "konut", name: "Konut", sub: "Housing", color: "#ff8a3d",
-        // 02.10 revizyonu: bölge beslenmeden yaşam alanı kurulmaz
+        // 02.10 (2): müşteri — "stadyum ile konut tek başlık altında olsun,
+        // Living Space", "yaşam alanı inşaat içinde olmalı". Tek yatırım:
+        // konunca konut mahallesi ve stadyum birlikte gelir.
+        id: "yasam", name: "Yaşam Alanı", sub: "Living Space", color: "#ff8a3d",
+        icon: "M3 21h18M4 21V11l5-3.5 5 3.5v10M14 21v-7a4.5 2.2 0 0 1 7 0v7M7 21v-4h4v4",
         needs: "gida",
         needsWhy: "Bölge beslenmeden yaşam alanı kurulmaz; önce gıda gelir.",
-        icon: "M3 21h18M5 21V10l7-5 7 5v11M10 21v-6h4v6",
-        effect: "Yaşam alanı kuruldu",
-        fact: "Tuzla'da 70 villalık Villa Flora ve Üsküp'te 323 bin m² karma proje.",
+        effect: "Yaşam alanı açıldı",
+        fact: "Villa Flora'da 70 villa; Spotify Camp Nou 62 bin kişilik kapasiteye ulaştı.",
         lede:
-          "İstanbul Tuzla Tepeören'de 38.684 m² arsa üzerinde 70 villa ve sosyal alanlardan oluşan Villa Flora 2025 sonunda tamamlandı; çatı güneş panelleri, yağmur suyu sarnıcı ve şarj üniteleriyle EDGE yeşil bina sertifikasına aday. Üsküp'teki 323 bin m² brüt alanlı karma projede son konut blokları da 2025'te teslim edildi.",
-        note: "Vadi yamacına, şehir dokusunun çekirdeğine kurulur.",
+          "Limak'ın yaşam alanları konuttan büyük kamu yapılarına uzanıyor. İstanbul Tuzla'daki 70 villalık Villa Flora 2025 sonunda tamamlandı; çatı güneş panelleri, yağmur suyu sarnıcı ve şarj üniteleriyle EDGE yeşil bina sertifikasına aday. Üsküp'teki 323 bin m² karma projenin son konut blokları da 2025'te teslim edildi. FC Barcelona ile imzalanan sözleşmeyle yenilenen Spotify Camp Nou Mart 2026'da 62 bin kapasiteye ulaştı; hedef 105 bin.",
+        note: "Gıda ve çimentodan sonra, nehrin doğusundaki düzlüğe kurulur.",
         stats: [
           { v: "70", l: "Villa (Villa Flora)" },
-          { v: "38.684 m²", l: "Proje arsası" },
-          { v: "323.000 m²", l: "Üsküp brüt alan" },
-        ],
-      },
-      {
-        id: "stadyum", name: "Stadyum", sub: "Stadium", color: "#ff8a3d",
-        icon: "M3 12a9 4.5 0 1 0 18 0a9 4.5 0 1 0-18 0M7 12v5a9 4.5 0 0 0 10 0v-5",
-        effect: "Stadyum açıldı",
-        fact: "Spotify Camp Nou Mart 2026'da 62 bin kapasiteye ulaştı; hedef 105 bin.",
-        lede:
-          "FC Barcelona ile 2023'te imzalanan tasarla-inşa et sözleşmesi kapsamında Limak İnşaat, Spotify Camp Nou'yu yeniliyor ve genişletiyor. Stadyum Kasım 2025'te 45 bin kapasiteyle yeniden seyirciyle buluştu; Mart 2026'da Gol Nord tribününün açılmasıyla kapasite 62 bini aştı.",
-        note: "Şehir kenarındaki geniş açık alana kurulur.",
-        stats: [
-          { v: "62.000", l: "Mevcut kapasite" },
+          { v: "323.000 m²", l: "Üsküp karma proje" },
+          { v: "62.000", l: "Camp Nou kapasitesi" },
           { v: "105.000", l: "Hedef kapasite" },
-          { v: "60.000 m²", l: "Çevre peyzajı" },
         ],
       },
       {
@@ -206,6 +195,28 @@ window.LIMAK_SECTORS = [
           { v: "5 + 3", l: "Üretim / reenjeksiyon kuyusu" },
         ],
       },
+      {
+        // 02.10 Toplantı Özeti, slayt 1: "Rüzgar eklenecek — Dağa".
+        // DOĞRULAMA: Limak'ın kendine ait bir RES'i yok (site, 2012-2025
+        // faaliyet raporları; Capital 16.10.2017). Doğru olan: Limak Enerji
+        // bağımsız RES'lerin elektriğini alıp sattı ve dengeledi (2013
+        // bültenleri; FR 2014: 250 MW RES portföyü), 2017'de Enercon ve
+        // Polat ile 1.000 MW YEKA RES'e teklif verdi. Sahiplik bildiren
+        // ("santrallerimiz", "kurulu gücümüz") ifade KULLANILMAZ.
+        id: "ruzgar", name: "Rüzgâr", sub: "Wind", color: "#9fe3f0",
+        icon: "M12 11.5V22M12 11.5 8.2 3.6M12 11.5l8.6 1.6M12 11.5 4.6 16.6M9.5 22h5",
+        effect: "Türbinler dönmeye başladı",
+        fact: "Limak Enerji 2014'te 250 MW'lık rüzgâr santrali portföyünün elektrik ticaretini yönetti.",
+        lede:
+          "Limak Enerji, 2012'den itibaren bağımsız üreticilere ait Akhisar (45 MW) ve Söke-Çatalbük (30 MW) gibi rüzgâr santrallerinin yıllık üretiminin tamamını satın alıp piyasaya sundu ve tahmin sapmalarını kendi dengeleme grubunda yönetti. 2017'de Enercon ve Polat ile birlikte 1.000 MW'lık YEKA rüzgâr yarışmasına teklif verdi.",
+        note: "Dağın sırt hattına kurulur.",
+        stats: [
+          { v: "250 MW", l: "Yönetilen RES portföyü (2014)" },
+          { v: "45 MW", l: "Akhisar RES alım anlaşması" },
+          { v: "30 MW", l: "Söke-Çatalbük RES alım anlaşması" },
+          { v: "1.000 MW", l: "YEKA RES teklifi (2017)" },
+        ],
+      },
     ],
   },
   {
@@ -266,10 +277,10 @@ window.LIMAK_FINALE = [
 
 /* ---- 02.10 revizyonu: tepsi sırası ----
    Enerji · Gıda · Çimento · İnşaat · Liman · Havalimanı · Turizm
-   İnşaat alt seçenekleri: Konut · Köprü · Otoyol · Stadyum (AVM kalktı) */
+   İnşaat alt seçenekleri: Köprü · Otoyol; Konut + Stadyum = Yaşam Alanı */
 (() => {
   const SIRA = ["enerji", "gida", "cimento", "insaat", "port", "hava", "turizm"];
-  const INSAAT = ["konut", "kopru", "otoyol", "stadyum"];
+  const INSAAT = ["yasam", "kopru", "otoyol"];
   const sira = (dizi) => (a, b) => dizi.indexOf(a.id) - dizi.indexOf(b.id);
   window.LIMAK_SECTORS.sort(sira(SIRA));
   const ins = window.LIMAK_SECTORS.find((s) => s.id === "insaat");
